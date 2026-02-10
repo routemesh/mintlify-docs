@@ -24,7 +24,8 @@
         ]
       },
       {
-        "tab": "API Reference"
+        "tab": "API Reference",
+        "openapi": "api-reference/openapi.json"
       }
     ]
   },
@@ -62,6 +63,12 @@
       "x": "https://x.com/mintlify",
       "github": "https://github.com/mintlify",
       "linkedin": "https://linkedin.com/company/mintlify"
+    }
+  },
+  "api": {
+    "openapi": "openapi.json",
+    "playground": {
+      "display": "interactive"
     }
   }
 }
