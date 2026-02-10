@@ -1,0 +1,19 @@
+---
+title: "Pricing Model"
+---
+
+Unlike other providers that set arbitrary pricing, pricing at RouteMesh is determined algorithmically and updated on a monthly basis. This is done for a few reasons:
+
+1. Different providers have different prices for the same route. However, their performance also varies considerably (latency, reliability, cost). This mix changes every moment.
+2. Newer chains often have limited support and are pricier due to lower demand.
+3. Popular chains such as Ethereum, Polygon, and Base have an abundance of nodes. This means we can reliably give you the best price and performance and pass those savings on to you.
+
+While it may be simple to pass a request through, our key challenge is ensuring that the request you send actually is successful! To ensure this, RouteMesh utilises the concept of **batches**. Every request received on our end is attempted to be served by the best provider according to the routing strategy of the API key. If the request isn't successful on the first attempt, we try again with the next provider, and so on. This retry process means that for every batch, multiple calls can be made. Our algorithms optimise to minimise the number of retries we do.
+
+To make matters more complicated, some providers charge for failed requests while others do not. These nuances mean that rather than having humans or RevOps sit down and price routes (chain ID and method combinations), we use algorithms. We do this in a way that is competitive for you while being profitable for us. Although it is hard to intuit, this model means that we're often cheaper than any provider on an aggregate basis.
+
+For customers with larger sustained usage, we can offer committed use discounts on chains where we have many nodes/providers.
+
+**To learn the difference Economy vs Performance keys visit the Routing Strategies page**
+
+> While route prices should trend lower over time, sometimes they can increase. In these instances, we work with our providers to get more capacity for that chain/route. This brings down our cost to serve that route and which can be passed on to you.

@@ -1,0 +1,23 @@
+---
+title: "Routing Strategies"
+---
+
+At present, we offer two routing strategies: **Budget** and **Performance**. Sometimes referred to as low cost or low latency.
+
+| **Strategy**    | **Primary Goal** | **Best For**                               | **Response Time** | **Cost** |
+| :-------------- | :--------------- | :----------------------------------------- | :---------------- | :------- |
+| **Economy**     | Minimize costs   | High-volume applications, batch processing | Higher            | Lowest   |
+| **Performance** | Minimize latency | Real-time applications, user-facing dApps  | Lowest            | Higher   |
+
+Strategies are set at an API key level, giving you flexibility based on the use case in your stack. For example:
+
+- You could use Economy keys for your indexing and backend services that need requests to eventually work
+- You could use Performance keys for your front-end to give a blazing-fast experience to your users
+
+**Please note that once you set a strategy for a key, you cannot change it.** However, you can always create new ones at any time.
+
+Budget keys are optimised to use the cheapest provider and keep falling back until a request works. **Note:** the maximum wait time until the next provider is dependent on the key type you use.
+
+Performance keys don't look at cost at all and are purely focused on latency.
+
+Both strategies ensure reliability and automatic failovers.

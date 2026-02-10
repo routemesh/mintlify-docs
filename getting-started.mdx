@@ -1,0 +1,59 @@
+---
+title: "Getting Started"
+---
+
+RouteMesh is the RPC service we wish we had when building in crypto. It began from our need of doing multi-chain analytics and being frustrated with the experience of:
+
+- Managing multiple provider subscriptions
+- Inconsistent pricing across providers
+- Unreliable responses from the same provider
+- Painful Fallback management
+- Arbitrary pricing structures with expensive overage costs
+- No single provider with access to all chains
+- Varying latencies/geographic locations
+- Bills from multiple RPC providers
+
+As a result, we built RouteMesh to solve these problems once and for all.
+
+## **Quick Start**
+
+### **1. Top Up Your Account**
+
+1. Go to the [<u>Billing page</u>](https://routeme.sh/dashboard/billing)
+2. Click on the "Buy More Credits" button and purchase as many credits as you think you need. Once the buying process is complete, the credits will be applied immediately.
+
+**Note:** the credits never expire, and you pay for only what you use.
+
+**Note (2):** one credit is equivalent to one dollar.
+
+### **2. Sign Up and Get Your API Key**
+
+1. Visit the [<u>RouteMesh Dashboard</u>](https://routeme.sh/auth/login)
+2. Create your account
+3. Navigate to the API Keys section
+4. Create your first API key
+5. Choose your routing strategy (Economy or Performance)
+   1. **Budget (Cost-Optimized)**: Prioritizes cost-effective nodes while maintaining reliability
+   2. **Performance (Latency-Optimized)**: Prioritizes fastest response times for optimal user experience
+
+### **3) Make Your First Request**
+
+Replace your existing RPC endpoint with RouteMesh:
+
+Bash
+
+```
+# Instead of:
+curl -X POST https://your-provider.com/rpc \
+  -H "Content-Type: application/json" \
+  -d '{"jsonrpc":"2.0","method":"eth_blockNumber","params":[],"id":1}'
+
+# Use RouteMesh:
+curl -X POST https://beta.router.0xarc.io/rpc/{chain_id}/{api_key} \
+  -H "Content-Type: application/json" \
+  -d '{"jsonrpc":"2.0","method":"eth_blockNumber","params":[],"id":1}'
+```
+
+## **Supported Networks**
+
+RouteMesh supports all major EVM networks. You can view the full list at: [<u>https://routeme.sh/chains</u>](https://routeme.sh/chains)

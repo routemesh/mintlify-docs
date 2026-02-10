@@ -1,0 +1,83 @@
+---
+title: "Data Quality"
+---
+
+\
+One of the hardest problems in operating RPC infrastructure at scale is data quality. Returning incorrect data can have severe downstream consequences, as blockchains underpin financial systems that require strong correctness guarantees.
+
+The challenge is not simply detecting incorrect data, but defining what “correct” even means in a decentralized system.
+
+An RPC node is just a participant in a consensus-based distributed network. Any response it returns is only meaningful relative to other nodes on the same chain. There is no absolute ground truth available to an individual RPC consumer in isolation. Verifying correctness requires cross-checking responses against multiple independent nodes, ideally distributed across providers and regions.
+
+For most developers, doing this reliably is impractical. You would need access to a large, diverse inventory of nodes, continuously sampling and comparing results at global scale. That is exactly the problem an RPC router or aggregator must solve.
+
+Over the past few months, while operating RouteMesh at scale, we repeatedly encountered issues such as:
+
+- Not knowing which nodes were synced to the tip of the chain versus which were lagging
+- Nodes advertised as archive nodes that did not actually serve archive data
+- Uncertainty around whether a null transaction result was valid or required retries, increasing latency
+- Maintaining confidence that our aggregation layer was returning correct data when routing across thousands of nodes from dozens of providers
+
+Given this scale and complexity, we decided to formalize data correctness as a first-class system. This resulted in Sentinel, RouteMesh’s data quality and consistency engine.
+
+## **Design Considerations**
+
+When designing Sentinel, we focused on two core questions:
+
+At the moment a user request is served, is the data correct relative to the network?
+
+Is the node serving that data sufficiently close to the tip of the chain?
+
+At the same time, we imposed several constraints:
+
+No additional latency on user-facing requests
+
+Cost efficiency, given large price variance across RPC providers
+
+Dynamic behavior that adapts to each chain’s block cadence (e.g. 250ms vs 10s block times)
+
+Robust handling of edge cases in consensus sampling
+
+Accurate comparison across differing response formats and encodings
+
+## **The Sentinel System**
+
+Sentinel is built on two complementary classes of checks: Replay Checks and Lag Checks.
+
+**Replay Checks**
+
+For every n-th request on a given chain–method combination (for example, eth_call on Ethereum), the original request parameters are asynchronously replayed in parallel against three randomly selected nodes from our inventory.
+
+The result originally served to the user is compared against the consensus of these sampled nodes. Any node that returns a result that deviates from consensus receives a strike.
+
+After a configurable number of strikes (currently three), the node is disqualified from serving production traffic and placed on cooldown. This process is fully asynchronous and does not impact request latency.
+
+**Lag Checks**
+
+Correctness is meaningless if data is stale. During replay checks, Sentinel also issues eth_blockNumber calls against a random subset of nodes and measures how far each node lags behind the observed consensus.
+
+Lag is normalized using the 30-day rolling average block time for each chain, allowing us to reason in terms of time rather than raw block counts.
+
+- Nodes slightly behind the tip receive strikes
+- Nodes significantly out of sync are immediately blacklisted, as there is no acceptable reason for severe lag in production RPC traffic
+
+## **Node Rehabilitation (“Staging Arena”)**
+
+Nodes that fail replay or lag checks are not permanently removed by default. Instead, they are moved into a staging arena, where they must pass consecutive validation rounds before being reintroduced to production traffic.
+
+This allows providers to recover from transient failures while preventing unreliable nodes from degrading user experience. The exact thresholds and rules are continuously refined as we gather more empirical data.
+
+Implementation Details and Edge Cases
+
+Some additional details for completeness:
+
+- If a chain or route has insufficient traffic, Sentinel forces validation rounds at least once per hour
+- If there are not enough nodes to establish meaningful consensus, no penalties are applied
+- If two nodes return errors and one returns a valid result, the erroring nodes are considered out of consensus
+- Transport-level failures (non-200 responses) do not count as strikes, as production routing will simply retry elsewhere
+
+All of this functionality is built directly into RouteMesh and is enabled by default at no additional cost. Users can be confident that responses are continuously validated against the broader network, not trusted blindly from a single provider.
+
+When issues are detected, we work directly with providers to resolve them. Providers will also be able to view node health and Sentinel outcomes through the upcoming provider dashboard.
+
+If you’d like to challenge any assumptions, dig deeper into the sampling model, or discuss alternative consensus heuristics, feel free to reach out.

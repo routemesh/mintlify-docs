@@ -1,0 +1,23 @@
+---
+title: "Redundancy"
+---
+
+Ensuring your application isn't denied RPC service, we've designed RouteMesh with multiple levels of redundancy. In this document we outline all the ways in which we ensure redundancy and how you can best make use of this.
+
+## **Load Balancing**
+
+Our primary load balancing instance at `lb.routeme.sh` is served by Cloudflare through through proxy based routing ensuring that traffic can migrate to the most healthy pools in less than 15 seconds should there be any server based failures.
+
+However, it is possible that Cloudflare could go down hence we have an alternative, fully functioning DNS based load balancer by AWS at `lb2.routeme.sh`. We highly recommend you adding this to your system in the case of Cloudflare going down. In the case there is an application level failure, we will ensure both `lb` and `lb2` fail as fast as possible to avoid long failure latencies. Our average time to incidence response is 10 minutes.
+
+## **Cloud Providers**
+
+At RouteMesh we have our own bare metal instances, however we recognise that these may have a level of failure that could be experienced due to machine configuration errors or traffic overloads. To mitigate this risk, a complete parallel set of infrastructure is actively maintained on Google Cloud and can spin up to handle these edge cases. All machines that have the RouteMesh instance have health endpoints that are checked at 15 second interval and can re-route traffic if needed.
+
+## **Machine Instances**
+
+Should a particular instance go down, our load balancers will reroute traffic to a machine closest in that region/edge. This ensures that higher latencies are the worst case scenario. You can specify the instance you'd like to connect to should you experience higher latencies from your application.
+
+## **Provider/Node Service**
+
+At RouteMesh we have over 15+ RPC providers in our system, should we experience failures on one node or provider. We keep a large inventory of providers ready to offset any provider failure immediately. Failure to serve traffic on a chain will only be experienced if all providers or nodes are exhausted. The only other instance of a failure would be a routing failure. Both of these scenarios are monitored through our internal monitoring dashboards.
