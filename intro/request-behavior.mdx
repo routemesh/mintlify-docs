@@ -1,0 +1,36 @@
+---
+title: "Request Behavior"
+---
+
+This page explains how RouteMesh handles your RPC requests: **allowed domains** for API keys, **cooldowns and rate limiting**, and **batch requests**.
+
+## Allowed domains
+
+API keys can be restricted to specific origins (domains). When an key has **allowed domains** set, the router checks the request’s `Origin` (or Referer) header against that list. If the request comes from a domain that is not allowed, the router returns **403 Forbidden** and does not forward the request.
+
+- **No allowed domains** (empty list): the key is allowed from any origin. Use this for server-side or mobile apps where no browser origin is sent.
+- **With allowed domains**: only requests whose origin matches one of the listed hostnames are accepted. Use this for web apps to limit key usage to your front-end domain(s).
+
+Allowed domains are configured when you create or update an API key in the dashboard. The comparison is against the request’s origin hostname (e.g. `app.example.com`), without path or scheme. This reduces the risk of a key being used from an unauthorized site.
+
+## Cooldowns and rate limiting
+
+When an upstream node returns a rate-limit (HTTP 429) or service-unavailable (503) response, RouteMesh puts that **pathway** (node + method) on a short **cooldown**. During cooldown, the router will not send new requests to that pathway, so you avoid hammering a node that is already overloaded.
+
+- Cooldowns are **per pathway** (node and method), not global. Other nodes or methods are still used.
+- If **all** pathways that can serve your route are on cooldown, the router returns HTTP **429 Too Many Requests** and a JSON-RPC error with code **-32003 (All nodes on cooldown)**.
+- When you get -32003, **retry after a short backoff** (e.g. a few seconds). Cooldowns are temporary; once they expire, the same request can succeed.
+
+Our aggregate capacity is high because we pool many providers. If you consistently hit cooldowns on a chain, reach out so we can help optimize.
+
+## Batch requests
+
+You can send multiple JSON-RPC requests in a single HTTP request by posting a **JSON array** of request objects instead of a single object. The response is a JSON array of responses in the **same order** as the requests.
+
+- **Order**: Response index `i` corresponds to request index `i`. Use the `id` field in each request to match responses to requests if needed.
+- **Partial failures**: Each batch item is processed independently. Some entries may have `result` and others `error`. The HTTP status of the batch is derived from the set of per-request statuses (e.g. 200 if any succeeded, 424 if all failed dependency, 429 if all rate limited).
+- **Empty batch**: Sending an empty array `[]` is invalid and returns **400** with JSON-RPC code **-32600 (Invalid request)**.
+
+Batch requests are a good way to reduce round-trips when you need multiple RPC calls (e.g. several `eth_call` or `eth_getBlockByNumber` in one HTTP request).
+
+For request debugging (including `X-Batch-Id` and the Dashboard Logs page), see [Debugging](/intro/debugging).

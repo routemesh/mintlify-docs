@@ -1,0 +1,22 @@
+---
+title: "Data quality"
+---
+
+RouteMesh runs continuous quality checks on provider nodes so that consumers get correct, up-to-date data. As a provider, you’ll see the impact of these checks in the [Inspect](/provider/inspect) view (e.g. “Replay checks failed”, “Lag checks failed”).
+
+## **Why we run these checks**
+
+We need to ensure that when we route traffic to your node, the response is **correct** and **fresh**. Two things can go wrong:
+
+1. **Incorrect results** — The node returns data that doesn’t match what the network actually has.
+2. **Stale data** — The node is behind the chain tip, so responses are outdated.
+
+Our systems run checks in the background to detect both. Nodes that repeatedly fail may be temporarily removed from production traffic until they pass again. This keeps quality high for consumers and keeps the playing field fair for providers.
+
+## **Types of checks**
+
+- **[Replay checks](/provider/replay-checks)** — Verify that your node returns **correct** results. We compare your node’s response to what we observe from the network.
+- **[Lag checks](/provider/lag-checks)** — Verify that your node is **up to date** with the chain. Nodes that are too far behind the tip may be temporarily removed.
+- **[When checks fail](/provider/quality-checks-recovery)** — What happens after a failure and where to see your results in the portal.
+
+We don’t publish our exact thresholds or algorithms so we can keep improving quality and stay fair to all providers. If you have questions about your own results, reach out to [k@routeme.sh](mailto:k@routeme.sh).

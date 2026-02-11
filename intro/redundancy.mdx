@@ -21,3 +21,5 @@ Should a particular instance go down, our load balancers will reroute traffic to
 ## **Provider/Node Service**
 
 At RouteMesh we have over 15+ RPC providers in our system, should we experience failures on one node or provider. We keep a large inventory of providers ready to offset any provider failure immediately. Failure to serve traffic on a chain will only be experienced if all providers or nodes are exhausted. The only other instance of a failure would be a routing failure. Both of these scenarios are monitored through our internal monitoring dashboards.
+
+We also continuously validate that nodes return **correct and up-to-date data** (see [Data quality](/intro/data-quality)). Nodes that fail these checks are temporarily removed from the pool until they pass again, so redundancy is not just about having many nodes but about ensuring they are reliable.

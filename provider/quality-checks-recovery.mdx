@@ -1,0 +1,13 @@
+---
+title: "When checks fail"
+---
+
+## **What happens after a failure**
+
+Nodes that fail [replay](/provider/replay-checks) or [lag](/provider/lag-checks) checks are not permanently banned. They are typically moved out of production for a period and must pass checks again before they can receive traffic. Once they consistently pass, they are reintroduced. This gives you a chance to fix issues without losing access permanently.
+
+## **Where to see your results**
+
+In the provider portal, open [Inspect](/provider/inspect). You can filter by time range and view metrics related to replay and lag checks for your nodes. Use this to spot problems and confirm that fixes are working.
+
+If you have questions about your own results, reach out to [k@routeme.sh](mailto:k@routeme.sh).

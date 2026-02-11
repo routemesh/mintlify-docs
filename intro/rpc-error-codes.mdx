@@ -1,0 +1,38 @@
+---
+title: "RPC Error Codes"
+---
+
+When a request fails, the response body is still valid JSON-RPC: the `result` field is omitted and the `error` object contains a numeric **code** and a **message**. These codes are distinct from HTTP status codes (e.g. 401, 429, 504). Use the table below to interpret `error.code` in the response.
+
+For a successful HTTP 200, the response may still contain a JSON-RPC `error` (e.g. chain not supported). Always check for the presence of `error` in the response body.
+
+## Code → meaning and when it occurs
+
+| Code   | Name                 | When it occurs |
+| :----- | :------------------- | :---------------------------------------------------------------------- |
+| -32700 | Parse error          | Request body is not valid JSON.                                         |
+| -32600 | Invalid request      | Malformed JSON-RPC (e.g. missing required fields) or an empty batch.  |
+| -32602 | Invalid params       | `chainId` is missing or invalid in the request path.                   |
+| -32603 | Internal error       | Router encountered an internal failure. Contact support if persistent. |
+| -32000 | Server error         | Unspecified server error (fallback when no specific code applies).     |
+| -32001 | Chain not supported  | The given `chainId` has no available nodes or paid plan support.       |
+| -32002 | Method not supported | The JSON-RPC method is not enabled for this chain.                     |
+| -32003 | All nodes on cooldown| Every node that could serve the route is temporarily in cooldown (e.g. after rate limits or errors). Retry after a short delay. |
+
+## Standard JSON-RPC codes
+
+- **-32700** and **-32600** follow the [JSON-RPC 2.0 spec](https://www.jsonrpc.org/specification#error_object) for parse and invalid request errors.
+- **-32602** is used for invalid `chainId` (invalid params).
+- **-32603** is used for internal router errors.
+- **-32xxx** in the -32000 range are router-specific and documented above.
+
+## What to do when you see an error
+
+- **-32700 / -32600**: Fix the request payload (valid JSON, non-empty batch, required fields present).
+- **-32602**: Check the URL path; ensure `chainId` is present and correct. Use the [API Reference](/api-reference) (GET /chains) to see supported chain IDs.
+- **-32001**: Use a supported chain or contact us to request support for a new chain.
+- **-32002**: The method is not available for this chain; use a different method or chain.
+- **-32003**: Retry after a short backoff; cooldowns are temporary. See [Request behavior: Cooldowns and rate limiting](/intro/request-behavior#cooldowns-and-rate-limiting) for details.
+- **-32603 / -32000**: Retry once; if it persists, contact support.
+
+When contacting support, include the `X-Batch-Id` response header from the failed request if you have it. See [Debugging](/intro/debugging).

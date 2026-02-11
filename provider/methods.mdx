@@ -1,0 +1,25 @@
+---
+title: "Methods"
+---
+
+**Methods** in the provider portal are the RPC methods (e.g. `eth_blockNumber`, `eth_getLogs`) you support. Configuring methods tells RouteMesh which of your routes can serve which consumer calls.
+
+## **Why methods matter**
+
+- Consumers send RPC requests for specific methods (and chains).
+- RouteMesh only routes a method to your nodes if you have declared support for that method and have an active plan covering it.
+- Correct method configuration avoids missed opportunities and misrouted requests.
+
+## **Managing methods in the portal**
+
+1. Go to [Provider portal → Methods](https://routeme.sh/app/provider/portal/methods).
+2. Add or edit the methods your infrastructure supports per chain/VM as appropriate.
+3. Ensure you have [Plans](/provider/plans) and [Nodes](/provider/nodes) that cover those methods so routes become active.
+
+## **Relationship to plans and nodes**
+
+- **Plans** define pricing and scope (chain, method, region, strategy).
+- **Methods** declare what you can handle.
+- **Nodes** are the actual endpoints that serve traffic.
+
+All three must align for a route to be active and receive traffic.

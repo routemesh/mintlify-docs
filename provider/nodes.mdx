@@ -1,0 +1,23 @@
+---
+title: "Nodes"
+---
+
+**Nodes** are the RPC endpoints (URLs) that RouteMesh sends consumer traffic to. In the provider portal, **Nodes** (under **Management**) is where you register, update, and manage these endpoints.
+
+## **What are nodes used for?**
+
+- Each node represents one or more RPC endpoints (e.g. for a given chain and region).
+- When RouteMesh selects your provider for a request, it forwards the call to the appropriate node.
+- Health, latency, and availability of your nodes affect routing decisions and your market share.
+
+## **Managing nodes in the portal**
+
+1. Go to [Provider portal → Nodes](https://routeme.sh/app/provider/portal/nodes).
+2. Add a new node (endpoint URL, chain, region, and any labels or metadata your org uses).
+3. Edit or remove nodes as your infrastructure changes.
+4. Ensure nodes are associated with the right [Methods](/provider/methods) and [Plans](/provider/plans) so routes stay active.
+
+## **Best practices**
+
+- Keep endpoints up to date and remove or disable nodes that are retired.
+- Use [Inspect](/provider/inspect) to monitor latency and errors per node/route and fix issues quickly.

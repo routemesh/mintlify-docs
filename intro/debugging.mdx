@@ -1,0 +1,48 @@
+---
+title: "Debugging"
+---
+
+This page covers the fastest ways to debug a failing or slow request: using the `X-Batch-Id` response header and the Dashboard Logs page.
+
+## Dashboard logs
+
+The Dashboard Logs page lets you inspect requests in near real-time and filter by chain, method, API key, time range, and more.
+
+- Logs page: [https://routeme.sh/app/consumer/logs](https://routeme.sh/app/consumer/logs)
+- Look for the `Batch ID` column - that value is the same correlation id used by `X-Batch-Id`.
+
+## Debugging with `X-Batch-Id`
+
+Every RPC request returns an `X-Batch-Id` response header (UUID). Save it in your app logs (especially on errors/timeouts). If you contact support, include it - it lets us trace your request across internal logs and analytics.
+
+`X-Batch-Id` is per HTTP request:
+
+- Single JSON-RPC request: one `X-Batch-Id`
+- JSON-RPC batch (array): one `X-Batch-Id` for the whole batch
+
+### How to capture it
+
+Using `curl`, include response headers with `-i`:
+
+```bash
+curl -i -X POST "https://rpc.routeme.sh/rpc/{chain_id}/{api_key}" \
+  -H "Content-Type: application/json" \
+  -d '{"jsonrpc":"2.0","method":"eth_blockNumber","params":[],"id":1}'
+```
+
+Then look for:
+
+```text
+X-Batch-Id: <uuid>
+```
+
+### How to use it
+
+1. Copy the `X-Batch-Id` value from the response headers.
+2. Open the Dashboard Logs page and search/copy-match against the `Batch ID` column.
+3. If you need help, send support the `X-Batch-Id` plus:
+   - timestamp (with timezone)
+   - `chain_id`
+   - method(s)
+   - approximate request volume / whether it was a batch
+

@@ -1,0 +1,17 @@
+---
+title: "Lag checks"
+---
+
+Lag checks verify that your node is **up to date** with the chain. A node that is far behind the tip can serve stale data, which is unacceptable for many use cases.
+
+## **How they work (at a high level)**
+
+- We measure how far each node lags behind the chain and apply internal thresholds. Nodes that are too far behind may be marked as having failed a lag check.
+- Severe lag can lead to immediate temporary removal; minor or occasional lag may be treated more leniently. The exact rules are internal and tuned over time.
+- Common causes: slow sync, overloaded nodes, or network issues between the node and the chain.
+
+## **What you can do**
+
+Keep your nodes well synced and healthy. Monitor your infrastructure so you don’t fall behind the tip. If you see lag check failures in [Inspect](/provider/inspect), improve sync and stability for that node.
+
+See [When checks fail](/provider/quality-checks-recovery) for what happens after a failure and how to monitor recovery.

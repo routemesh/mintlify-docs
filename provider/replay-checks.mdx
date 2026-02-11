@@ -1,0 +1,19 @@
+---
+title: "Replay checks"
+---
+
+Replay checks verify that your node returns **correct** results. In simple terms: we compare your node’s response to what we observe from the network. If your node consistently disagrees with that baseline, it may be marked as having failed a replay check.
+
+We run these checks on **read-only, deterministic** RPC methods. State-changing or non-deterministic methods (e.g. sends, subscriptions, filters) are not replayed, since their results are not comparable across nodes in the same way.
+
+## **How they work (at a high level)**
+
+- These checks run **asynchronously** and do not add latency to live consumer requests.
+- Failures are counted per node (and per batch/time window in the portal). Repeated failures can lead to the node being temporarily taken out of production.
+- Common causes: misconfigured nodes, sync issues, or bugs in how certain methods or parameters are handled.
+
+## **What you can do**
+
+Ensure your RPC endpoints return correct, deterministic results for the methods and chains you support. If you see replay check failures in [Inspect](/provider/inspect), investigate that node and fix configuration or sync issues.
+
+See [When checks fail](/provider/quality-checks-recovery) for what happens after a failure and how to monitor recovery.

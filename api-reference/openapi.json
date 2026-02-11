@@ -160,6 +160,11 @@
         "responses": {
           "200": {
             "description": "JSON-RPC response (single or batch)",
+            "headers": {
+              "X-Batch-Id": {
+                "$ref": "#/components/headers/XBatchId"
+              }
+            },
             "content": {
               "application/json": {
                 "schema": {
@@ -177,6 +182,11 @@
           },
           "400": {
             "description": "Bad request (e.g. invalid JSON or invalid JSON-RPC payload)",
+            "headers": {
+              "X-Batch-Id": {
+                "$ref": "#/components/headers/XBatchId"
+              }
+            },
             "content": {
               "application/json": {
                 "schema": {
@@ -187,6 +197,11 @@
           },
           "401": {
             "description": "Unauthorized (invalid API key)",
+            "headers": {
+              "X-Batch-Id": {
+                "$ref": "#/components/headers/XBatchId"
+              }
+            },
             "content": {
               "text/plain": {
                 "schema": {
@@ -198,6 +213,11 @@
           },
           "403": {
             "description": "Forbidden (domain not allowed)",
+            "headers": {
+              "X-Batch-Id": {
+                "$ref": "#/components/headers/XBatchId"
+              }
+            },
             "content": {
               "text/plain": {
                 "schema": {
@@ -208,6 +228,11 @@
           },
           "422": {
             "description": "Unprocessable entity (e.g. chain not supported or method not supported)",
+            "headers": {
+              "X-Batch-Id": {
+                "$ref": "#/components/headers/XBatchId"
+              }
+            },
             "content": {
               "application/json": {
                 "schema": {
@@ -225,6 +250,11 @@
           },
           "424": {
             "description": "Failed dependency (all upstream providers failed with non-2xx responses)",
+            "headers": {
+              "X-Batch-Id": {
+                "$ref": "#/components/headers/XBatchId"
+              }
+            },
             "content": {
               "application/json": {
                 "schema": {
@@ -242,6 +272,11 @@
           },
           "429": {
             "description": "Too many requests (all upstream providers rate limited / on cooldown)",
+            "headers": {
+              "X-Batch-Id": {
+                "$ref": "#/components/headers/XBatchId"
+              }
+            },
             "content": {
               "application/json": {
                 "schema": {
@@ -258,10 +293,20 @@
             }
           },
           "500": {
-            "description": "Internal server error"
+            "description": "Internal server error",
+            "headers": {
+              "X-Batch-Id": {
+                "$ref": "#/components/headers/XBatchId"
+              }
+            }
           },
           "504": {
             "description": "Gateway timeout (router timed out waiting for upstream providers)",
+            "headers": {
+              "X-Batch-Id": {
+                "$ref": "#/components/headers/XBatchId"
+              }
+            },
             "content": {
               "application/json": {
                 "schema": {
@@ -339,13 +384,16 @@
         }
       },
       "JsonRpcError": {
+        "description": "JSON-RPC error object. See [RPC Error Codes](/rpc-error-codes) for full code → meaning and when each occurs.",
         "type": "object",
         "properties": {
           "code": {
-            "type": "integer"
+            "type": "integer",
+            "description": "Router error codes: -32700 (parse error), -32600 (invalid request), -32602 (invalid params), -32603 (internal error), -32000 (server error), -32001 (chain not supported), -32002 (method not supported), -32003 (all nodes on cooldown)."
           },
           "message": {
-            "type": "string"
+            "type": "string",
+            "description": "Human-readable error message."
           },
           "data": {
             "description": "Optional additional error data."
@@ -389,6 +437,15 @@
         "items": {
           "$ref": "#/components/schemas/JsonRpcResponse"
         }
+      }
+    },
+    "headers": {
+      "XBatchId": {
+        "description": "Correlation id for this HTTP request. Save it and share with RouteMesh support to help trace requests across logs and analytics.",
+        "schema": {
+          "type": "string"
+        },
+        "example": "1f4f3b23-1c2b-4c87-9c2f-7e2e0f0df4b5"
       }
     }
   }

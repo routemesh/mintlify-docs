@@ -4,7 +4,7 @@ title: "How it Works"
 
 Before we understand how RouteMesh works, there are a few pieces of terminology that are important to understand:
 
-1. **Provider**: refers to an entitiy that runs nodes (Alchemy, Quicknode etc)
+1. **Provider**: refers to an entity that runs nodes (Alchemy, Quicknode etc)
 2. **Node**: the actual URL of the machine that runs the client software of a particular blockchain
 3. **Route**: a combination of a `{chainId}-{method}` ie: Polygon `eth_call` would be a route described as `polygon:eth_call` or `137:eth_call`
 4. **Pathway**: the node-method combination that can be used to serve a **route**
@@ -24,5 +24,6 @@ When routing a request, there are a few things we do behind the scenes to make y
 3. **Automatically falling back** to the next most optimal node should any failures occur. If no providers can serve a request, then either the blockchain is down or your request was invalid.
 4. Many providers treat their error and response handling differently. We ensure that you are protected from this chaos and ensure you get **uniform responses**, the way you expect them to be.
 5. Our **rate limits** are dependent on the chain you're calling and the aggregate capacity of all providers on that chain. This often means that we can handle higher loads than most RPC providers. Reach out if this sounds like you!
+6. We run continuous **data quality checks** (Sentinel) in the background so that responses are validated for correctness and freshness against the network. This does not add latency to your requests. See [Data quality](/intro/data-quality) for how it works.
 
 Once your request is delivered, you'll simply be billed for that route based on the route's price for that month. Our pricing can be viewed [<u>here</u>](https://routeme.sh/pricing).

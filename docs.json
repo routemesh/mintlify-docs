@@ -1,26 +1,81 @@
 {
   "$schema": "https://mintlify.com/docs.json",
   "theme": "mint",
-  "name": "Mint Starter Kit",
+  "name": "RouteMesh",
   "colors": {
-    "primary": "#16A34A",
-    "light": "#07C983",
-    "dark": "#15803D"
+    "primary": "#FACC15",
+    "light": "#FDE047",
+    "dark": "#EAB308"
   },
-  "favicon": "/favicon.svg",
+  "favicon": "/favicon.png",
   "navigation": {
     "tabs": [
       {
         "tab": "Consumers",
-        "pages": [
-          "intro/getting-started",
-          "intro/how-it-works",
-          "intro/network-support",
-          "intro/pricing-model",
-          "intro/routing-strategies",
-          "intro/data-quality",
-          "intro/redundancy",
-          "intro/updates"
+        "groups": [
+          {
+            "group": "Intro",
+            "pages": [
+              "intro/getting-started",
+              "intro/quick-start",
+              "intro/how-it-works",
+              "intro/pricing-model",
+              "intro/updates"
+            ]
+          },
+          {
+            "group": "Concepts",
+            "pages": [
+              "intro/routing-strategies",
+              "intro/data-quality",
+              "intro/redundancy"
+            ]
+          },
+          {
+            "group": "Integration",
+            "pages": [
+              "intro/request-behavior",
+              "intro/debugging",
+              "intro/network-support",
+              "intro/rpc-error-codes"
+            ]
+          }
+        ]
+      },
+      {
+        "tab": "Providers",
+        "groups": [
+          {
+            "group": "Getting started",
+            "pages": [
+              "provider/overview",
+              "provider/dashboard"
+            ]
+          },
+          {
+            "group": "Management",
+            "pages": [
+              "provider/plans",
+              "provider/methods",
+              "provider/nodes"
+            ]
+          },
+          {
+            "group": "Concepts",
+            "pages": [
+              "provider/data-quality",
+              "provider/replay-checks",
+              "provider/lag-checks",
+              "provider/quality-checks-recovery"
+            ]
+          },
+          {
+            "group": "Insights",
+            "pages": [
+              "provider/inspect",
+              "provider/market-share"
+            ]
+          }
         ]
       },
       {
@@ -30,20 +85,20 @@
     ]
   },
   "logo": {
-    "light": "/logo/light.svg",
-    "dark": "/logo/dark.svg"
+    "light": "/logo/light.png",
+    "dark": "/logo/dark.png"
   },
   "navbar": {
     "links": [
       {
         "label": "Support",
-        "href": "mailto:hi@mintlify.com"
+        "href": "mailto:support@routeme.sh"
       }
     ],
     "primary": {
       "type": "button",
       "label": "Dashboard",
-      "href": "https://dashboard.mintlify.com"
+      "href": "https://routeme.sh"
     }
   },
   "contextual": {
@@ -60,9 +115,9 @@
   },
   "footer": {
     "socials": {
-      "x": "https://x.com/mintlify",
-      "github": "https://github.com/mintlify",
-      "linkedin": "https://linkedin.com/company/mintlify"
+      "x": "https://x.com/routemesh",
+      "github": "https://github.com/routemesh",
+      "linkedin": "https://linkedin.com/company/routemesh"
     }
   },
   "api": {

@@ -4,6 +4,15 @@
 
 # Documentation project instructions
 
+## Docs ↔ codebase sync (cron / AI verification)
+
+To **verify that docs are correct and synced to the codebase**, use:
+
+1. **`PROMPT_DOCS_SYNC.md`** — Prompt to run (e.g. in a cron job). Tells the AI exactly what to check and in what order.
+2. **`DOCS_CODE_MAP.md`** — Map of each doc area to the code paths that implement it (atlas, sentinel, front-end). The AI should read this first.
+
+Run the prompt from the repo root so both `mintlify-docs/` and `atlas/`, `front-end/`, `sentinel/` are in context. The prompt outputs PASS/FAIL and a list of discrepancies.
+
 ## About this project
 
 - This is a documentation site built on [Mintlify](https://mintlify.com)
@@ -14,12 +23,12 @@
 
 ## Terminology
 
-<!-- Add product-specific terms and preferred usage -->
-<!-- Example: Use "workspace" not "project", "member" not "user" -->
+{/* Add product-specific terms and preferred usage */}
+{/* Example: Use "workspace" not "project", "member" not "user" */}
 
 ## Style preferences
 
-<!-- Add any project-specific style rules below -->
+{/* Add any project-specific style rules below */}
 
 - Use active voice and second person ("you")
 - Keep sentences concise — one idea per sentence
@@ -29,5 +38,5 @@
 
 ## Content boundaries
 
-<!-- Define what should and shouldn't be documented -->
-<!-- Example: Don't document internal admin features -->
+{/* Define what should and shouldn't be documented */}
+{/* Example: Don't document internal admin features */}
