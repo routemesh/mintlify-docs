@@ -11,16 +11,16 @@
   "navigation": {
     "tabs": [
       {
-        "tab": "Intro",
+        "tab": "Consumers",
         "pages": [
-          "getting-started",
-          "how-it-works",
-          "network-support",
-          "pricing-model",
-          "routing-strategies",
-          "data-quality",
-          "redundancy",
-          "updates"
+          "intro/getting-started",
+          "intro/how-it-works",
+          "intro/network-support",
+          "intro/pricing-model",
+          "intro/routing-strategies",
+          "intro/data-quality",
+          "intro/redundancy",
+          "intro/updates"
         ]
       },
       {
@@ -48,15 +48,15 @@
   },
   "contextual": {
     "options": [
-     "copy",
-     "view",
-     "chatgpt",
-     "claude",
-     "perplexity",
-     "mcp",
-     "cursor",
-     "vscode"
-   ]
+      "copy",
+      "view",
+      "chatgpt",
+      "claude",
+      "perplexity",
+      "mcp",
+      "cursor",
+      "vscode"
+    ]
   },
   "footer": {
     "socials": {
@@ -66,7 +66,7 @@
     }
   },
   "api": {
-    "openapi": "openapi.json",
+    "openapi": "api-reference/openapi.json",
     "playground": {
       "display": "interactive"
     }

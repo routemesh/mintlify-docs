@@ -1,87 +1,394 @@
 {
   "openapi": "3.0.0",
   "info": {
-    "title": "Atlas | External",
+    "title": "RouteMesh API",
     "version": "1.0.0",
-    "description": ""
+    "description": "HTTP API for routing JSON-RPC requests across providers.",
+    "license": {
+      "name": "Proprietary",
+      "url": "https://routeme.sh"
+    }
   },
   "servers": [
     {
-      "url": "{{baseUrl}}"
+      "url": "https://rpc.routeme.sh",
+      "description": "Primary API endpoint"
+    },
+    {
+      "url": "https://lb.routeme.sh",
+      "description": "Cloudflare load balancer (recommended)"
+    },
+    {
+      "url": "https://lb2.routeme.sh",
+      "description": "AWS DNS load balancer (backup)"
+    }
+  ],
+  "security": [],
+  "tags": [
+    {
+      "name": "RPC",
+      "description": "Forward JSON-RPC requests to the router."
+    },
+    {
+      "name": "Chains",
+      "description": "Discover supported chains."
     }
   ],
   "paths": {
-    "/rpc/999/{perfKey}": {
-      "post": {
-        "summary": "RPC Request",
-        "responses": {},
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "type": "object",
-                "properties": {
-                  "id": {
-                    "type": "integer"
-                  },
-                  "jsonrpc": {
-                    "type": "string",
-                    "format": "utc-millisec"
-                  },
-                  "method": {
-                    "type": "string"
-                  },
-                  "params": {
-                    "type": "array",
-                    "items": {
-                      "type": "object",
-                      "properties": {
-                        "data": {
-                          "type": "string",
-                          "format": "utc-millisec"
-                        }
-                      }
-                    }
+    "/chains": {
+      "get": {
+        "operationId": "getChains",
+        "tags": [
+          "Chains"
+        ],
+        "summary": "List supported chains",
+        "description": "Returns chains that have at least one available node and at least one paid provider plan.",
+        "responses": {
+          "200": {
+            "description": "Supported chains",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/ChainInfo"
                   }
-                }
-              },
-              "example": {
-                "id": 1,
-                "jsonrpc": "2.0",
-                "method": "eth_blockNumber",
-                "params": [
+                },
+                "example": [
                   {
-                    "data": "0x4360005260206000f3"
-                  },
-                  "0x14a2cb8"
+                    "chain_id": "1",
+                    "name": "Ethereum Mainnet"
+                  }
                 ]
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request"
+          },
+          "500": {
+            "description": "Internal server error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true
+                },
+                "example": {
+                  "error": "Unable to get supported chains. Please contact support."
+                }
               }
             }
           }
         }
-      },
-      "parameters": [
-        {
-          "name": "perfKey",
-          "in": "path",
-          "required": true,
-          "schema": {
-            "type": "string"
-          },
-          "example": "{{perfKey}}"
-        }
-      ]
-    },
-    "/chains": {
-      "get": {
-        "summary": "Get supported chains",
-        "responses": {}
       }
     },
-    "/health": {
-      "get": {
-        "summary": "Health",
-        "responses": {}
+    "/rpc/{chainId}/{apiKey}": {
+      "post": {
+        "operationId": "postRpc",
+        "tags": [
+          "RPC"
+        ],
+        "summary": "JSON-RPC proxy",
+        "description": "Send a single JSON-RPC request or a JSON-RPC batch (array).",
+        "parameters": [
+          {
+            "name": "chainId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "example": "1"
+          },
+          {
+            "name": "apiKey",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "password"
+            },
+            "example": "your-api-key"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "oneOf": [
+                  {
+                    "$ref": "#/components/schemas/JsonRpcRequest"
+                  },
+                  {
+                    "$ref": "#/components/schemas/JsonRpcBatchRequest"
+                  }
+                ]
+              },
+              "examples": {
+                "single": {
+                  "summary": "Single request",
+                  "value": {
+                    "jsonrpc": "2.0",
+                    "method": "eth_blockNumber",
+                    "params": [],
+                    "id": 1
+                  }
+                },
+                "batch": {
+                  "summary": "Batch request",
+                  "value": [
+                    {
+                      "jsonrpc": "2.0",
+                      "method": "eth_blockNumber",
+                      "params": [],
+                      "id": 1
+                    },
+                    {
+                      "jsonrpc": "2.0",
+                      "method": "net_version",
+                      "params": [],
+                      "id": 2
+                    }
+                  ]
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "JSON-RPC response (single or batch)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "oneOf": [
+                    {
+                      "$ref": "#/components/schemas/JsonRpcResponse"
+                    },
+                    {
+                      "$ref": "#/components/schemas/JsonRpcBatchResponse"
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request (e.g. invalid JSON or invalid JSON-RPC payload)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/JsonRpcResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized (invalid API key)",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "type": "string"
+                },
+                "example": "Invalid API key"
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden (domain not allowed)",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Unprocessable entity (e.g. chain not supported or method not supported)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "oneOf": [
+                    {
+                      "$ref": "#/components/schemas/JsonRpcResponse"
+                    },
+                    {
+                      "$ref": "#/components/schemas/JsonRpcBatchResponse"
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "424": {
+            "description": "Failed dependency (all upstream providers failed with non-2xx responses)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "oneOf": [
+                    {
+                      "$ref": "#/components/schemas/JsonRpcResponse"
+                    },
+                    {
+                      "$ref": "#/components/schemas/JsonRpcBatchResponse"
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Too many requests (all upstream providers rate limited / on cooldown)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "oneOf": [
+                    {
+                      "$ref": "#/components/schemas/JsonRpcResponse"
+                    },
+                    {
+                      "$ref": "#/components/schemas/JsonRpcBatchResponse"
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal server error"
+          },
+          "504": {
+            "description": "Gateway timeout (router timed out waiting for upstream providers)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "oneOf": [
+                    {
+                      "$ref": "#/components/schemas/JsonRpcResponse"
+                    },
+                    {
+                      "$ref": "#/components/schemas/JsonRpcBatchResponse"
+                    }
+                  ]
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "ChainInfo": {
+        "type": "object",
+        "properties": {
+          "chain_id": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "chain_id",
+          "name"
+        ],
+        "additionalProperties": false
+      },
+      "JsonRpcRequest": {
+        "type": "object",
+        "properties": {
+          "jsonrpc": {
+            "type": "string",
+            "enum": [
+              "2.0"
+            ]
+          },
+          "method": {
+            "type": "string"
+          },
+          "params": {
+            "oneOf": [
+              {
+                "type": "array",
+                "items": {}
+              },
+              {
+                "type": "object",
+                "additionalProperties": true
+              }
+            ]
+          },
+          "id": {}
+        },
+        "required": [
+          "jsonrpc",
+          "method",
+          "id"
+        ],
+        "additionalProperties": false
+      },
+      "JsonRpcBatchRequest": {
+        "type": "array",
+        "items": {
+          "$ref": "#/components/schemas/JsonRpcRequest"
+        }
+      },
+      "JsonRpcError": {
+        "type": "object",
+        "properties": {
+          "code": {
+            "type": "integer"
+          },
+          "message": {
+            "type": "string"
+          },
+          "data": {
+            "description": "Optional additional error data."
+          }
+        },
+        "required": [
+          "code",
+          "message"
+        ],
+        "additionalProperties": true
+      },
+      "JsonRpcResponse": {
+        "type": "object",
+        "properties": {
+          "jsonrpc": {
+            "type": "string",
+            "enum": [
+              "2.0"
+            ]
+          },
+          "id": {},
+          "result": {
+            "description": "Result value (varies by JSON-RPC method)."
+          },
+          "error": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/JsonRpcError"
+              }
+            ]
+          }
+        },
+        "required": [
+          "jsonrpc",
+          "id"
+        ],
+        "additionalProperties": true
+      },
+      "JsonRpcBatchResponse": {
+        "type": "array",
+        "items": {
+          "$ref": "#/components/schemas/JsonRpcResponse"
+        }
       }
     }
   }
