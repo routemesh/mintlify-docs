@@ -83,6 +83,45 @@
         }
       }
     },
+    "/health": {
+      "get": {
+        "operationId": "getHealth",
+        "tags": [
+          "Chains"
+        ],
+        "summary": "Service health",
+        "description": "Public health endpoint used by load balancers and uptime checks.",
+        "responses": {
+          "200": {
+            "description": "Service is healthy and serving requests",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean"
+                    },
+                    "message": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "success",
+                    "message"
+                  ],
+                  "additionalProperties": false
+                },
+                "example": {
+                  "success": true,
+                  "message": "The service is ready to serve requests"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/rpc/{chainId}/{apiKey}": {
       "post": {
         "operationId": "postRpc",
