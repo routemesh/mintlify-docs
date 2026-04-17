@@ -1,0 +1,51 @@
+---
+title: "Provider Onboarding"
+description: "How to join RouteMesh as a node provider — create your account and get connected."
+---
+
+## How to join as a provider
+
+Becoming a RouteMesh provider is straightforward. You don't need any special software or SDK — just your RPC endpoints and pricing.
+
+### 1. Create your account
+
+Start by creating a provider account at **[routeme.sh/app](https://routeme.sh/app)**.
+
+### 2. Reach out
+
+Email us at **[k@routeme.sh](mailto:k@routeme.sh)** to let us know you'd like to join as a provider. You can also reach us on **[Twitter / X](https://twitter.com/routemesh)** or **[LinkedIn](https://linkedin.com/company/routemesh)**.
+
+We'll walk you through the next steps and get you connected.
+
+### 3. Add your nodes and methods
+
+Once you're in the **Provider portal**, you'll configure three things:
+
+- **Nodes** — Register your RPC endpoint URLs with the chain and region they serve
+- **Methods** — Declare which RPC methods (e.g. `eth_call`, `eth_getLogs`) you support per chain
+- **Plans** — Set your pricing per chain, method, and region. You can enter any price you want — we don't force anything. It's up to you how competitive you want to be.
+
+All three must align for your routes to become active and receive traffic.
+
+See the following pages for details:
+
+- [Plans](/provider/plans) — Pricing configuration
+- [Methods](/provider/methods) — RPC method support
+- [Nodes](/provider/nodes) — RPC endpoint management
+
+### 4. Go live
+
+Once your nodes, methods, and plans are configured, your routes become eligible for consumer traffic immediately. There's no manual approval step for individual routes — the router selects you based on your pricing and availability.
+
+You'll start seeing requests and revenue in the [Provider Dashboard](/provider/dashboard) right away, including your market share and how you stack against other providers.
+
+---
+
+## What we handle
+
+- **Routing** — We route consumer traffic to your nodes based on pricing, latency, and strategy
+- **Monitoring** — You get a dashboard showing requests, market share, and latency
+- **Failover** — Automatic retries across providers if any node fails
+- **Data quality** — We run replay and lag checks to keep your nodes in good standing
+
+See [Data quality](/provider/data-quality) for how checks work and what to do if your nodes flag failures.
