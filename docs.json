@@ -48,9 +48,10 @@
           {
             "group": "Getting started",
             "pages": [
-              "provider/onboarding",
               "provider/overview",
-              "provider/dashboard"
+              "provider/onboarding",
+              "provider/dashboard",
+              "provider/pricing"
             ]
           },
           {
