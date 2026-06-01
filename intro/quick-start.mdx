@@ -31,7 +31,7 @@ Use a supported `chain_id` (e.g. `1` for Ethereum) and your API key:
 
 ```bash
 # Replace your existing RPC endpoint with RouteMesh:
-curl -X POST https://rpc.routeme.sh/rpc/{chain_id}/{api_key} \
+curl -X POST https://lb.routeme.sh/rpc/{chain_id}/{api_key} \
   -H "Content-Type: application/json" \
   -d '{"jsonrpc":"2.0","method":"eth_blockNumber","params":[],"id":1}'
 ```

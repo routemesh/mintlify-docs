@@ -11,12 +11,8 @@
   },
   "servers": [
     {
-      "url": "https://rpc.routeme.sh",
-      "description": "Primary API endpoint"
-    },
-    {
       "url": "https://lb.routeme.sh",
-      "description": "Cloudflare load balancer (recommended)"
+      "description": "Primary API endpoint"
     },
     {
       "url": "https://lb2.routeme.sh",

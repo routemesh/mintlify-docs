@@ -25,7 +25,7 @@ Every RPC request returns an `X-Batch-Id` response header (UUID). Save it in you
 Using `curl`, include response headers with `-i`:
 
 ```bash
-curl -i -X POST "https://rpc.routeme.sh/rpc/{chain_id}/{api_key}" \
+curl -i -X POST "https://lb.routeme.sh/rpc/{chain_id}/{api_key}" \
   -H "Content-Type: application/json" \
   -d '{"jsonrpc":"2.0","method":"eth_blockNumber","params":[],"id":1}'
 ```
