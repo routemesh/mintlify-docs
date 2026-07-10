@@ -1,976 +1,1087 @@
 {
-  "openapi": "3.0.0",
-  "info": {
-    "title": "RouteMesh API",
-    "version": "1.0.0",
-    "description": "HTTP API for routing JSON-RPC requests across providers, managing API keys, and viewing usage.",
-    "license": {
-      "name": "Proprietary",
-      "url": "https://routeme.sh"
-    }
+ "openapi": "3.0.0",
+ "info": {
+  "title": "RouteMesh API",
+  "version": "1.0.0",
+  "description": "HTTP API for routing JSON-RPC requests across providers, managing API keys, and viewing usage.",
+  "license": {
+   "name": "Proprietary",
+   "url": "https://routeme.sh"
+  }
+ },
+ "servers": [
+  {
+   "url": "https://lb.routeme.sh",
+   "description": "Primary API endpoint"
   },
-  "servers": [
-    {
-      "url": "https://lb.routeme.sh",
-      "description": "Primary API endpoint"
-    },
-    {
-      "url": "https://lb2.routeme.sh",
-      "description": "AWS DNS load balancer (backup)"
-    }
-  ],
-  "security": [],
-  "tags": [
-    {
-      "name": "RPC",
-      "description": "Forward JSON-RPC requests to the router."
-    },
-    {
-      "name": "Chains",
-      "description": "Discover supported chains."
-    },
-    {
-      "name": "API Keys",
-      "description": "Manage your API keys for self-service access."
-    },
-    {
-      "name": "Usage",
-      "description": "View your usage and billing data."
-    },
-    {
-      "name": "Health",
-      "description": "Service health checks."
-    }
-  ],
-  "paths": {
-    "/health": {
-      "get": {
-        "operationId": "getHealth",
-        "tags": ["Health"],
-        "summary": "Service health",
-        "description": "Public health endpoint used by load balancers and uptime checks.",
-        "responses": {
-          "200": {
-            "description": "Service is healthy and serving requests",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "properties": {
-                    "success": {
-                      "type": "boolean"
-                    },
-                    "message": {
-                      "type": "string"
-                    }
-                  },
-                  "required": ["success", "message"],
-                  "additionalProperties": false
-                },
-                "example": {
-                  "success": true,
-                  "message": "The service is ready to serve requests"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/chains": {
-      "get": {
-        "operationId": "getChains",
-        "tags": ["Chains"],
-        "summary": "List supported chains",
-        "description": "Returns chains that have at least one available node and at least one paid provider plan.",
-        "responses": {
-          "200": {
-            "description": "Supported chains",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "array",
-                  "items": {
-                    "$ref": "#/components/schemas/ChainInfo"
-                  }
-                }
-              }
-            }
-          },
-          "400": {
-            "description": "Bad request"
-          },
-          "500": {
-            "description": "Internal server error"
-          }
-        }
-      }
-    },
-    "/rpc/{chainId}/{apiKey}": {
-      "post": {
-        "operationId": "postRpc",
-        "tags": ["RPC"],
-        "summary": "JSON-RPC proxy",
-        "description": "Send a single JSON-RPC request or a JSON-RPC batch (array). Replace {apiKey} with your actual API key.",
-        "parameters": [
-          {
-            "name": "chainId",
-            "in": "path",
-            "required": true,
-            "description": "Chain ID (e.g. 1 for Ethereum, 137 for Polygon, 8453 for Base).",
-            "schema": {
-              "type": "string"
-            },
-            "example": "1"
-          },
-          {
-            "name": "apiKey",
-            "in": "path",
-            "required": true,
-            "description": "Your RouteMesh API key (from the dashboard).",
-            "schema": {
-              "type": "string",
-              "format": "password"
-            },
-            "example": "your-api-key"
-          }
-        ],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "oneOf": [
-                  {
-                    "$ref": "#/components/schemas/JsonRpcRequest"
-                  },
-                  {
-                    "$ref": "#/components/schemas/JsonRpcBatchRequest"
-                  }
-                ]
-              }
-            }
-          }
-        },
-        "responses": {
-          "200": {
-            "description": "JSON-RPC response (single or batch)",
-            "headers": {
-              "X-Batch-Id": {
-                "$ref": "#/components/headers/XBatchId"
-              }
-            },
-            "content": {
-              "application/json": {
-                "schema": {
-                  "oneOf": [
-                    {
-                      "$ref": "#/components/schemas/JsonRpcResponse"
-                    },
-                    {
-                      "$ref": "#/components/schemas/JsonRpcBatchResponse"
-                    }
-                  ]
-                }
-              }
-            }
-          },
-          "400": {
-            "description": "Bad request (e.g. invalid JSON or invalid JSON-RPC payload)"
-          },
-          "401": {
-            "description": "Unauthorized (invalid API key)"
-          },
-          "403": {
-            "description": "Forbidden (domain not allowed)"
-          },
-          "422": {
-            "description": "Unprocessable entity (e.g. chain not supported or method not supported)"
-          },
-          "424": {
-            "description": "Failed dependency (all upstream providers failed with non-2xx responses)"
-          },
-          "429": {
-            "description": "Too many requests (all upstream providers rate limited / on cooldown)"
-          },
-          "500": {
-            "description": "Internal server error"
-          },
-          "504": {
-            "description": "Gateway timeout (router timed out waiting for upstream providers)"
-          }
-        }
-      }
-    },
-    "/api-keys": {
-      "get": {
-        "operationId": "listMyApiKeys",
-        "tags": ["API Keys"],
-        "summary": "List my API keys",
-        "description": "Returns the authenticated customer's API keys. Excludes the secret key value; use X-Hint for identification.",
-        "security": [
-          {
-            "MgmtKeyAuth": []
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "List of API keys",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "array",
-                  "items": {
-                    "$ref": "#/components/schemas/ApiKeyResponse"
-                  }
-                }
-              }
-            }
-          },
-          "401": {
-            "description": "Unauthorized"
-          }
-        }
-      },
-      "post": {
-        "operationId": "createApiKey",
-        "tags": ["API Keys"],
-        "summary": "Create API key",
-        "description": "Creates a new API key for the authenticated customer. The secret key value is returned once — store it securely.",
-        "security": [
-          {
-            "MgmtKeyAuth": []
-          }
-        ],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/ApiKeyCreateRequest"
-              }
-            }
-          }
-        },
-        "responses": {
-          "201": {
-            "description": "API key created (secret returned once)",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ApiKeyCreatedResponse"
-                }
-              }
-            }
-          },
-          "400": {
-            "description": "Bad request (invalid domains, routing strategy, or missing fields)"
-          },
-          "401": {
-            "description": "Unauthorized"
-          },
-          "500": {
-            "description": "Internal server error"
-          }
-        }
-      }
-    },
-    "/api-keys/{apiKey}": {
-      "put": {
-        "operationId": "updateApiKey",
-        "tags": ["API Keys"],
-        "summary": "Update API key",
-        "description": "Partially updates an API key. Omitted fields (not included in body) leave the stored value unchanged.",
-        "security": [
-          {
-            "MgmtKeyAuth": []
-          }
-        ],
-        "parameters": [
-          {
-            "name": "apiKey",
-            "in": "path",
-            "required": true,
-            "description": "The API key string (not the numeric ID).",
-            "schema": {
-              "type": "string"
-            },
-            "example": "rm_abc123def456..."
-          }
-        ],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/ApiKeyUpdateRequest"
-              }
-            }
-          }
-        },
-        "responses": {
-          "200": {
-            "description": "API key updated",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ApiKeyResponse"
-                }
-              }
-            }
-          },
-          "400": {
-            "description": "Bad request (invalid domains or missing API key)"
-          },
-          "401": {
-            "description": "Unauthorized"
-          },
-          "404": {
-            "description": "API key not found"
-          },
-          "500": {
-            "description": "Internal server error"
-          }
-        }
-      }
-    },
-    "/usage": {
-      "get": {
-        "operationId": "getUsage",
-        "tags": ["Usage"],
-        "summary": "Get usage data",
-        "description": "Returns customer-scoped usage aggregates. Supports filtering by time range, chain, API key, grouping, and granularity. By default returns summary and balance.",
-        "security": [
-          {
-            "MgmtKeyAuth": []
-          }
-        ],
-        "parameters": [
-          {
-            "name": "from",
-            "in": "query",
-            "description": "Start time (RFC3339). Defaults to 30 days ago.",
-            "schema": {
-              "type": "string",
-              "format": "date-time"
-            },
-            "example": "2025-01-01T00:00:00Z"
-          },
-          {
-            "name": "to",
-            "in": "query",
-            "description": "End time (RFC3339). Defaults to now.",
-            "schema": {
-              "type": "string",
-              "format": "date-time"
-            },
-            "example": "2025-07-01T00:00:00Z"
-          },
-          {
-            "name": "include",
-            "in": "query",
-            "description": "Comma-separated list of sections to include. Options: summary, balance, by_chain, by_api_key, by_api_key_chain, top_methods, time_series, by_scenario. Default: summary,balance.",
-            "schema": {
-              "type": "string",
-              "example": "summary,balance,by_chain,by_api_key"
-            }
-          },
-          {
-            "name": "group_by",
-            "in": "query",
-            "description": "Group usage by a dimension. Options: chain, api_key, api_key,chain, method, day.",
-            "schema": {
-              "type": "string",
-              "example": "chain"
-            }
-          },
-          {
-            "name": "granularity",
-            "in": "query",
-            "description": "Time bucket size. Options: day, hour. Default: day.",
-            "schema": {
-              "type": "string",
-              "enum": ["day", "hour"]
-            },
-            "example": "day"
-          },
-          {
-            "name": "chain_id",
-            "in": "query",
-            "description": "Filter by chain ID (e.g. 1, 137, 8453).",
-            "schema": {
-              "type": "string"
-            },
-            "example": "1"
-          },
-          {
-            "name": "api_key_id",
-            "in": "query",
-            "description": "Filter by API key numeric ID (found in list response).",
-            "schema": {
-              "type": "integer"
-            },
-            "example": 1
-          },
-          {
-            "name": "limit",
-            "in": "query",
-            "description": "Maximum number of rows returned (default and max depend on config).",
-            "schema": {
-              "type": "integer",
-              "minimum": 1
-            },
-            "example": 100
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Usage data",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/UsageResponse"
-                }
-              }
-            }
-          },
-          "400": {
-            "description": "Bad request (invalid time range, include value, group_by, or granularity)"
-          },
-          "401": {
-            "description": "Unauthorized"
-          },
-          "500": {
-            "description": "Internal server error"
-          },
-          "503": {
-            "description": "Usage data temporarily unavailable (ClickHouse)"
-          }
-        }
-      }
-    }
+  {
+   "url": "https://lb2.routeme.sh",
+   "description": "AWS DNS load balancer (backup)"
+  }
+ ],
+ "security": [],
+ "tags": [
+  {
+   "name": "RPC",
+   "description": "Forward JSON-RPC requests to the router."
   },
-  "components": {
-    "securitySchemes": {
-      "MgmtKeyAuth": {
-        "type": "apiKey",
-        "in": "header",
-        "name": "X-Mgmt-Key",
-        "description": "Management API key from the RouteMesh dashboard. Required for customer API endpoints (/api-keys, /usage). Each request also carries the customer's RPC API key in the URL path for the RPC endpoint."
-      }
-    },
-    "schemas": {
-      "ChainInfo": {
-        "type": "object",
-        "properties": {
-          "chain_id": {
-            "type": "string",
-            "description": "Numeric chain ID (e.g. \"1\", \"137\", \"8453\")."
-          },
-          "name": {
-            "type": "string",
-            "description": "Human-readable chain name."
-          }
-        },
-        "required": ["chain_id", "name"],
-        "additionalProperties": false
-      },
-      "JsonRpcRequest": {
-        "type": "object",
-        "properties": {
-          "jsonrpc": {
-            "type": "string",
-            "enum": ["2.0"]
-          },
-          "method": {
-            "type": "string",
-            "description": "JSON-RPC method name (e.g. eth_blockNumber, eth_call)."
-          },
-          "params": {
-            "oneOf": [
-              {
-                "type": "array",
-                "items": {}
-              },
-              {
-                "type": "object",
-                "additionalProperties": true
-              }
-            ],
-            "description": "Method parameters (varies by method)."
-          },
-          "id": {}
-        },
-        "required": ["jsonrpc", "method", "id"],
-        "additionalProperties": false
-      },
-      "JsonRpcBatchRequest": {
-        "type": "array",
-        "items": {
-          "$ref": "#/components/schemas/JsonRpcRequest"
-        }
-      },
-      "JsonRpcError": {
-        "description": "JSON-RPC error object. See [RPC Error Codes](/rpc-error-codes) for full code → meaning and when each occurs.",
-        "type": "object",
-        "properties": {
-          "code": {
-            "type": "integer",
-            "description": "Router error codes: -32700 (parse error), -32600 (invalid request), -32602 (invalid params), -32603 (internal error), -32000 (server error), -32001 (chain not supported), -32002 (method not supported), -32003 (all nodes on cooldown)."
+  {
+   "name": "Chains",
+   "description": "Discover supported chains."
+  },
+  {
+   "name": "API Keys",
+   "description": "Manage your API keys for self-service access."
+  },
+  {
+   "name": "Usage",
+   "description": "View your usage and billing data."
+  },
+  {
+   "name": "Health",
+   "description": "Service health checks."
+  }
+ ],
+ "paths": {
+  "/health": {
+   "get": {
+    "operationId": "getHealth",
+    "tags": [
+     "Health"
+    ],
+    "summary": "Service health",
+    "description": "Public health endpoint used by load balancers and uptime checks.",
+    "responses": {
+     "200": {
+      "description": "Service is healthy and serving requests",
+      "content": {
+       "application/json": {
+        "schema": {
+         "type": "object",
+         "properties": {
+          "success": {
+           "type": "boolean"
           },
           "message": {
-            "type": "string",
-            "description": "Human-readable error message."
-          },
-          "data": {
-            "description": "Optional additional error data."
+           "type": "string"
           }
+         },
+         "required": [
+          "success",
+          "message"
+         ],
+         "additionalProperties": false
         },
-        "required": ["code", "message"],
-        "additionalProperties": true
-      },
-      "JsonRpcResponse": {
-        "type": "object",
-        "properties": {
-          "jsonrpc": {
-            "type": "string",
-            "enum": ["2.0"]
-          },
-          "id": {},
-          "result": {
-            "description": "Result value (varies by JSON-RPC method)."
-          },
-          "error": {
-            "anyOf": [
-              {
-                "$ref": "#/components/schemas/JsonRpcError"
-              }
-            ]
-          }
-        },
-        "required": ["jsonrpc", "id"],
-        "additionalProperties": true
-      },
-      "JsonRpcBatchResponse": {
-        "type": "array",
-        "items": {
-          "$ref": "#/components/schemas/JsonRpcResponse"
+        "example": {
+         "success": true,
+         "message": "The service is ready to serve requests"
         }
-      },
-      "ApiKeyCreateRequest": {
-        "type": "object",
-        "properties": {
-          "name": {
-            "type": "string",
-            "description": "Friendly name for this key (e.g. \"Production\", \"Staging\").",
-            "nullable": true
-          },
-          "allowed_domains": {
-            "type": "array",
-            "items": {
-              "type": "string"
-            },
-            "description": "List of allowed origins/domains. Requests from other domains are rejected with 403.",
-            "minItems": 1
-          },
-          "routing_strategy": {
-            "type": "string",
-            "enum": ["economy", "performance"],
-            "description": "economy — most competitive prices; performance — fastest routes."
-          }
-        },
-        "required": ["allowed_domains", "routing_strategy"],
-        "additionalProperties": false
-      },
-      "ApiKeyUpdateRequest": {
-        "type": "object",
-        "properties": {
-          "allowed_domains": {
-            "type": "array",
-            "items": {
-              "type": "string"
-            },
-            "description": "Replace allowed domains list. Omit to keep current value.",
-            "nullable": true
-          },
-          "name": {
-            "type": "string",
-            "description": "Update friendly name. Omit to keep current value.",
-            "nullable": true
-          },
-          "active": {
-            "type": "boolean",
-            "description": "Activate or deactivate the key. Omit to keep current value.",
-            "nullable": true
-          }
-        },
-        "additionalProperties": false
-      },
-      "ApiKeyCreatedResponse": {
-        "type": "object",
-        "properties": {
-          "id": {
-            "type": "integer"
-          },
-          "customer_id": {
-            "type": "integer"
-          },
-          "allowed_domains": {
-            "type": "array",
-            "items": {
-              "type": "string"
-            }
-          },
-          "api_key": {
-            "type": "string",
-            "description": "The secret API key. Save this — it is returned only once."
-          },
-          "created_at": {
-            "type": "string",
-            "format": "date-time"
-          },
-          "updated_at": {
-            "type": "string",
-            "format": "date-time"
-          },
-          "name": {
-            "type": "string",
-            "nullable": true
-          },
-          "routing_strategy": {
-            "type": "string",
-            "enum": ["economy", "performance"]
-          },
-          "active": {
-            "type": "boolean"
-          },
-          "bypass_credit_check": {
-            "type": "boolean"
-          }
-        },
-        "required": ["id", "customer_id", "allowed_domains", "api_key", "created_at", "updated_at", "name", "routing_strategy", "active", "bypass_credit_check"],
-        "additionalProperties": false
-      },
-      "ApiKeyResponse": {
-        "type": "object",
-        "properties": {
-          "id": {
-            "type": "integer",
-            "description": "Internal key ID (for filtering /usage)."
-          },
-          "name": {
-            "type": "string",
-            "nullable": true,
-            "description": "Friendly name."
-          },
-          "active": {
-            "type": "boolean",
-            "description": "Whether the key is active."
-          },
-          "allowed_domains": {
-            "type": "array",
-            "items": {
-              "type": "string"
-            },
-            "description": "Allowed domains."
-          },
-          "routing_strategy": {
-            "type": "string",
-            "enum": ["economy", "performance"]
-          },
-          "created_at": {
-            "type": "string",
-            "format": "date-time"
-          },
-          "updated_at": {
-            "type": "string",
-            "format": "date-time"
-          }
-        },
-        "required": ["id", "name", "active", "allowed_domains", "routing_strategy", "created_at", "updated_at"],
-        "additionalProperties": false
-      },
-      "UsagePeriod": {
-        "type": "object",
-        "properties": {
-          "from": {
-            "type": "string",
-            "format": "date-time"
-          },
-          "to": {
-            "type": "string",
-            "format": "date-time"
-          }
-        },
-        "required": ["from", "to"]
-      },
-      "UsageSummary": {
-        "type": "object",
-        "properties": {
-          "credits_consumed": {
-            "type": "number",
-            "description": "Total credits spent in the period."
-          },
-          "request_count": {
-            "type": "integer",
-            "format": "int64",
-            "description": "Total number of requests."
-          },
-          "credits_per_request": {
-            "type": "number",
-            "description": "Average cost per request."
-          }
-        },
-        "required": ["credits_consumed", "request_count", "credits_per_request"]
-      },
-      "UsageBalance": {
-        "type": "object",
-        "properties": {
-          "credits": {
-            "type": "number",
-            "description": "Current credit balance."
-          },
-          "as_of": {
-            "type": "string",
-            "format": "date-time",
-            "description": "Timestamp of the balance snapshot."
-          }
-        },
-        "required": ["credits", "as_of"]
-      },
-      "UsageByChain": {
-        "type": "object",
-        "properties": {
-          "chain_id": {
-            "type": "string"
-          },
-          "credits_consumed": {
-            "type": "number"
-          },
-          "request_count": {
-            "type": "integer",
-            "format": "int64"
-          }
-        },
-        "required": ["chain_id", "credits_consumed", "request_count"]
-      },
-      "UsageByAPIKey": {
-        "type": "object",
-        "properties": {
-          "api_key_id": {
-            "type": "integer"
-          },
-          "name": {
-            "type": "string",
-            "nullable": true
-          },
-          "key_hint": {
-            "type": "string",
-            "description": "Masked API key (e.g. rm_a…456)."
-          },
-          "credits_consumed": {
-            "type": "number"
-          },
-          "request_count": {
-            "type": "integer",
-            "format": "int64"
-          }
-        },
-        "required": ["api_key_id", "key_hint", "credits_consumed", "request_count"]
-      },
-      "UsageByAPIKeyChain": {
-        "type": "object",
-        "properties": {
-          "api_key_id": {
-            "type": "integer"
-          },
-          "name": {
-            "type": "string",
-            "nullable": true
-          },
-          "key_hint": {
-            "type": "string"
-          },
-          "chain_id": {
-            "type": "string"
-          },
-          "credits_consumed": {
-            "type": "number"
-          },
-          "request_count": {
-            "type": "integer",
-            "format": "int64"
-          }
-        },
-        "required": ["api_key_id", "key_hint", "chain_id", "credits_consumed", "request_count"]
-      },
-      "UsageTopMethod": {
-        "type": "object",
-        "properties": {
-          "method": {
-            "type": "string"
-          },
-          "credits_consumed": {
-            "type": "number"
-          },
-          "request_count": {
-            "type": "integer",
-            "format": "int64"
-          }
-        },
-        "required": ["method", "credits_consumed", "request_count"]
-      },
-      "UsageTimeSeriesPoint": {
-        "type": "object",
-        "properties": {
-          "bucket": {
-            "type": "string",
-            "format": "date-time"
-          },
-          "credits_consumed": {
-            "type": "number"
-          },
-          "request_count": {
-            "type": "integer",
-            "format": "int64"
-          }
-        },
-        "required": ["bucket", "credits_consumed", "request_count"]
-      },
-      "UsageByScenario": {
-        "type": "object",
-        "properties": {
-          "scenario": {
-            "type": "string",
-            "description": "Outcome scenario (e.g. first_hop_success, retry, timeout)."
-          },
-          "credits_consumed": {
-            "type": "number"
-          },
-          "request_count": {
-            "type": "integer",
-            "format": "int64"
-          }
-        },
-        "required": ["scenario", "credits_consumed", "request_count"]
-      },
-      "UsageResponse": {
-        "type": "object",
-        "properties": {
-          "customer_id": {
-            "type": "integer"
-          },
-          "period": {
-            "$ref": "#/components/schemas/UsagePeriod"
-          },
-          "summary": {
-            "$ref": "#/components/schemas/UsageSummary",
-            "description": "Aggregate credits and request count."
-          },
-          "balance": {
-            "$ref": "#/components/schemas/UsageBalance",
-            "description": "Current credit balance."
-          },
-          "by_chain": {
-            "type": "array",
-            "items": {
-              "$ref": "#/components/schemas/UsageByChain"
-            },
-            "description": "Per-chain breakdown."
-          },
-          "by_api_key": {
-            "type": "array",
-            "items": {
-              "$ref": "#/components/schemas/UsageByAPIKey"
-            },
-            "description": "Per-API-key breakdown."
-          },
-          "by_api_key_chain": {
-            "type": "array",
-            "items": {
-              "$ref": "#/components/schemas/UsageByAPIKeyChain"
-            },
-            "description": "Per-API-key, per-chain breakdown."
-          },
-          "top_methods": {
-            "type": "array",
-            "items": {
-              "$ref": "#/components/schemas/UsageTopMethod"
-            },
-            "description": "Top RPC methods by spend."
-          },
-          "time_series": {
-            "type": "array",
-            "items": {
-              "$ref": "#/components/schemas/UsageTimeSeriesPoint"
-            },
-            "description": "Time-bucketed usage data."
-          },
-          "by_scenario": {
-            "type": "array",
-            "items": {
-              "$ref": "#/components/schemas/UsageByScenario"
-            },
-            "description": "Usage by routing outcome scenario."
-          },
-          "groups": {
-            "type": "array",
-            "items": {
-              "type": "object",
-              "properties": {
-                "api_key_id": {
-                  "type": "integer",
-                  "nullable": true
-                },
-                "name": {
-                  "type": "string",
-                  "nullable": true
-                },
-                "key_hint": {
-                  "type": "string",
-                  "nullable": true
-                },
-                "chain_id": {
-                  "type": "string",
-                  "nullable": true
-                },
-                "method": {
-                  "type": "string",
-                  "nullable": true
-                },
-                "scenario": {
-                  "type": "string",
-                  "nullable": true
-                },
-                "day": {
-                  "type": "string",
-                  "nullable": true
-                },
-                "credits_consumed": {
-                  "type": "number"
-                },
-                "request_count": {
-                  "type": "integer",
-                  "format": "int64"
-                }
-              },
-              "required": ["credits_consumed", "request_count"]
-            },
-            "description": "Grouped results when group_by is specified."
-          }
-        },
-        "required": ["customer_id", "period"],
-        "additionalProperties": false
+       }
       }
-    },
-    "headers": {
-      "XBatchId": {
-        "description": "Correlation ID for this HTTP request. Save it and share with RouteMesh support to help trace requests across logs and analytics.",
-        "schema": {
-          "type": "string"
-        },
-        "example": "1f4f3b23-1c2b-4c87-9c2f-7e2e0f0df4b5"
-      }
+     }
     }
+   }
+  },
+  "/chains": {
+   "get": {
+    "operationId": "getChains",
+    "tags": [
+     "Chains"
+    ],
+    "summary": "List supported chains",
+    "description": "Returns chains that have at least one available node and at least one paid provider plan.",
+    "responses": {
+     "200": {
+      "description": "Supported chains",
+      "content": {
+       "application/json": {
+        "schema": {
+         "type": "array",
+         "items": {
+          "$ref": "#/components/schemas/ChainInfo"
+         }
+        }
+       }
+      }
+     },
+     "400": {
+      "description": "Bad request"
+     },
+     "500": {
+      "description": "Internal server error"
+     }
+    }
+   }
+  },
+  "/rpc/{chainId}/{apiKey}": {
+   "post": {
+    "operationId": "postRpc",
+    "tags": [
+     "RPC"
+    ],
+    "summary": "JSON-RPC proxy",
+    "description": "Send a single JSON-RPC request or a JSON-RPC batch (array). Replace {apiKey} with your actual API key.",
+    "parameters": [
+     {
+      "name": "chainId",
+      "in": "path",
+      "required": true,
+      "description": "Chain ID (e.g. 1 for Ethereum, 137 for Polygon, 8453 for Base).",
+      "schema": {
+       "type": "string"
+      },
+      "example": "1"
+     },
+     {
+      "name": "apiKey",
+      "in": "path",
+      "required": true,
+      "description": "Your RouteMesh API key (from the dashboard).",
+      "schema": {
+       "type": "string",
+       "format": "password"
+      },
+      "example": "your-api-key"
+     }
+    ],
+    "requestBody": {
+     "required": true,
+     "content": {
+      "application/json": {
+       "schema": {
+        "oneOf": [
+         {
+          "$ref": "#/components/schemas/JsonRpcRequest"
+         },
+         {
+          "$ref": "#/components/schemas/JsonRpcBatchRequest"
+         }
+        ]
+       }
+      }
+     }
+    },
+    "responses": {
+     "200": {
+      "description": "JSON-RPC response (single or batch)",
+      "headers": {
+       "X-Batch-Id": {
+        "$ref": "#/components/headers/XBatchId"
+       }
+      },
+      "content": {
+       "application/json": {
+        "schema": {
+         "oneOf": [
+          {
+           "$ref": "#/components/schemas/JsonRpcResponse"
+          },
+          {
+           "$ref": "#/components/schemas/JsonRpcBatchResponse"
+          }
+         ]
+        }
+       }
+      }
+     },
+     "400": {
+      "description": "Bad request (e.g. invalid JSON or invalid JSON-RPC payload)"
+     },
+     "401": {
+      "description": "Unauthorized (invalid API key)"
+     },
+     "403": {
+      "description": "Forbidden (domain not allowed)"
+     },
+     "422": {
+      "description": "Unprocessable entity (e.g. chain not supported or method not supported)"
+     },
+     "424": {
+      "description": "Failed dependency (all upstream providers failed with non-2xx responses)"
+     },
+     "429": {
+      "description": "Too many requests (all upstream providers rate limited / on cooldown)"
+     },
+     "500": {
+      "description": "Internal server error"
+     },
+     "504": {
+      "description": "Gateway timeout (router timed out waiting for upstream providers)"
+     }
+    }
+   }
+  },
+  "/api-keys": {
+   "get": {
+    "operationId": "listMyApiKeys",
+    "tags": [
+     "API Keys"
+    ],
+    "summary": "List my API keys",
+    "description": "Returns the authenticated customer's API keys. Excludes the secret key value; use X-Hint for identification.",
+    "security": [
+     {
+      "MgmtKeyAuth": []
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "List of API keys",
+      "content": {
+       "application/json": {
+        "schema": {
+         "type": "array",
+         "items": {
+          "$ref": "#/components/schemas/ApiKeyResponse"
+         }
+        }
+       }
+      }
+     },
+     "401": {
+      "description": "Unauthorized"
+     }
+    }
+   },
+   "post": {
+    "operationId": "createApiKey",
+    "tags": [
+     "API Keys"
+    ],
+    "summary": "Create API key",
+    "description": "Creates a new API key for the authenticated customer. The secret key value is returned once \u2014 store it securely.",
+    "security": [
+     {
+      "MgmtKeyAuth": []
+     }
+    ],
+    "requestBody": {
+     "required": true,
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/ApiKeyCreateRequest"
+       }
+      }
+     }
+    },
+    "responses": {
+     "201": {
+      "description": "API key created (secret returned once)",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/ApiKeyCreatedResponse"
+        }
+       }
+      }
+     },
+     "400": {
+      "description": "Bad request (invalid domains, routing strategy, or missing fields)"
+     },
+     "401": {
+      "description": "Unauthorized"
+     },
+     "500": {
+      "description": "Internal server error"
+     }
+    }
+   }
+  },
+  "/api-keys/{apiKey}": {
+   "put": {
+    "operationId": "updateApiKey",
+    "tags": [
+     "API Keys"
+    ],
+    "summary": "Update API key",
+    "description": "Partially updates an API key. Omitted fields (not included in body) leave the stored value unchanged.",
+    "security": [
+     {
+      "MgmtKeyAuth": []
+     }
+    ],
+    "parameters": [
+     {
+      "name": "apiKey",
+      "in": "path",
+      "required": true,
+      "description": "The API key string (not the numeric ID).",
+      "schema": {
+       "type": "string"
+      },
+      "example": "rm_abc123def456..."
+     }
+    ],
+    "requestBody": {
+     "required": true,
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/ApiKeyUpdateRequest"
+       }
+      }
+     }
+    },
+    "responses": {
+     "200": {
+      "description": "API key updated",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/ApiKeyResponse"
+        }
+       }
+      }
+     },
+     "400": {
+      "description": "Bad request (invalid domains or missing API key)"
+     },
+     "401": {
+      "description": "Unauthorized"
+     },
+     "404": {
+      "description": "API key not found"
+     },
+     "500": {
+      "description": "Internal server error"
+     }
+    }
+   }
+  },
+  "/usage": {
+   "get": {
+    "operationId": "getUsage",
+    "tags": [
+     "Usage"
+    ],
+    "summary": "Get usage data",
+    "description": "Returns customer-scoped usage aggregates. Supports filtering by time range, chain, API key, grouping, and granularity. By default returns summary and balance.",
+    "security": [
+     {
+      "MgmtKeyAuth": []
+     }
+    ],
+    "parameters": [
+     {
+      "name": "from",
+      "in": "query",
+      "description": "Start time (RFC3339). Defaults to 30 days ago.",
+      "schema": {
+       "type": "string",
+       "format": "date-time"
+      },
+      "example": "2025-01-01T00:00:00Z"
+     },
+     {
+      "name": "to",
+      "in": "query",
+      "description": "End time (RFC3339). Defaults to now.",
+      "schema": {
+       "type": "string",
+       "format": "date-time"
+      },
+      "example": "2025-07-01T00:00:00Z"
+     },
+     {
+      "name": "include",
+      "in": "query",
+      "description": "Comma-separated list of sections to include. Options: summary, balance, by_chain, by_api_key, by_api_key_chain, top_methods, time_series, by_scenario. Default: summary,balance.",
+      "schema": {
+       "type": "string",
+       "example": "summary,balance,by_chain,by_api_key"
+      }
+     },
+     {
+      "name": "group_by",
+      "in": "query",
+      "description": "Group usage by a dimension. Options: chain, api_key, api_key,chain, method, day.",
+      "schema": {
+       "type": "string",
+       "example": "chain"
+      }
+     },
+     {
+      "name": "granularity",
+      "in": "query",
+      "description": "Time bucket size. Options: day, hour. Default: day.",
+      "schema": {
+       "type": "string",
+       "enum": [
+        "day",
+        "hour"
+       ]
+      },
+      "example": "day"
+     },
+     {
+      "name": "chain_id",
+      "in": "query",
+      "description": "Filter by chain ID (e.g. 1, 137, 8453).",
+      "schema": {
+       "type": "string"
+      },
+      "example": "1"
+     },
+     {
+      "name": "api_key_id",
+      "in": "query",
+      "description": "Filter by API key numeric ID (found in list response).",
+      "schema": {
+       "type": "integer"
+      },
+      "example": 1
+     },
+     {
+      "name": "limit",
+      "in": "query",
+      "description": "Maximum number of rows returned (default and max depend on config).",
+      "schema": {
+       "type": "integer",
+       "minimum": 1
+      },
+      "example": 100
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Usage data",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/UsageResponse"
+        }
+       }
+      }
+     },
+     "400": {
+      "description": "Bad request (invalid time range, include value, group_by, or granularity)"
+     },
+     "401": {
+      "description": "Unauthorized"
+     },
+     "500": {
+      "description": "Internal server error"
+     },
+     "503": {
+      "description": "Usage data temporarily unavailable (ClickHouse)"
+     }
+    }
+   }
   }
+ },
+ "components": {
+  "securitySchemes": {
+   "MgmtKeyAuth": {
+    "type": "apiKey",
+    "in": "header",
+    "name": "X-Api-Key",
+    "description": "Management token from the RouteMesh dashboard (Settings \u2192 Management Tokens). Required for customer API endpoints (/api-keys, /usage). Tokens are prefixed rmtm_ and scoped to your account. Authenticate by passing the token in the X-Api-Key header. Separate from RPC service keys (rm_), which authenticate dApp traffic to the routing layer."
+   }
+  },
+  "schemas": {
+   "ChainInfo": {
+    "type": "object",
+    "properties": {
+     "chain_id": {
+      "type": "string",
+      "description": "Numeric chain ID (e.g. \"1\", \"137\", \"8453\")."
+     },
+     "name": {
+      "type": "string",
+      "description": "Human-readable chain name."
+     }
+    },
+    "required": [
+     "chain_id",
+     "name"
+    ],
+    "additionalProperties": false
+   },
+   "JsonRpcRequest": {
+    "type": "object",
+    "properties": {
+     "jsonrpc": {
+      "type": "string",
+      "enum": [
+       "2.0"
+      ]
+     },
+     "method": {
+      "type": "string",
+      "description": "JSON-RPC method name (e.g. eth_blockNumber, eth_call)."
+     },
+     "params": {
+      "oneOf": [
+       {
+        "type": "array",
+        "items": {}
+       },
+       {
+        "type": "object",
+        "additionalProperties": true
+       }
+      ],
+      "description": "Method parameters (varies by method)."
+     },
+     "id": {}
+    },
+    "required": [
+     "jsonrpc",
+     "method",
+     "id"
+    ],
+    "additionalProperties": false
+   },
+   "JsonRpcBatchRequest": {
+    "type": "array",
+    "items": {
+     "$ref": "#/components/schemas/JsonRpcRequest"
+    }
+   },
+   "JsonRpcError": {
+    "description": "JSON-RPC error object. See [RPC Error Codes](/rpc-error-codes) for full code \u2192 meaning and when each occurs.",
+    "type": "object",
+    "properties": {
+     "code": {
+      "type": "integer",
+      "description": "Router error codes: -32700 (parse error), -32600 (invalid request), -32602 (invalid params), -32603 (internal error), -32000 (server error), -32001 (chain not supported), -32002 (method not supported), -32003 (all nodes on cooldown)."
+     },
+     "message": {
+      "type": "string",
+      "description": "Human-readable error message."
+     },
+     "data": {
+      "description": "Optional additional error data."
+     }
+    },
+    "required": [
+     "code",
+     "message"
+    ],
+    "additionalProperties": true
+   },
+   "JsonRpcResponse": {
+    "type": "object",
+    "properties": {
+     "jsonrpc": {
+      "type": "string",
+      "enum": [
+       "2.0"
+      ]
+     },
+     "id": {},
+     "result": {
+      "description": "Result value (varies by JSON-RPC method)."
+     },
+     "error": {
+      "anyOf": [
+       {
+        "$ref": "#/components/schemas/JsonRpcError"
+       }
+      ]
+     }
+    },
+    "required": [
+     "jsonrpc",
+     "id"
+    ],
+    "additionalProperties": true
+   },
+   "JsonRpcBatchResponse": {
+    "type": "array",
+    "items": {
+     "$ref": "#/components/schemas/JsonRpcResponse"
+    }
+   },
+   "ApiKeyCreateRequest": {
+    "type": "object",
+    "properties": {
+     "name": {
+      "type": "string",
+      "description": "Friendly name for this key (e.g. \"Production\", \"Staging\").",
+      "nullable": true
+     },
+     "allowed_domains": {
+      "type": "array",
+      "items": {
+       "type": "string"
+      },
+      "description": "List of allowed origins/domains. Requests from other domains are rejected with 403.",
+      "minItems": 1
+     },
+     "routing_strategy": {
+      "type": "string",
+      "enum": [
+       "economy",
+       "performance"
+      ],
+      "description": "economy \u2014 most competitive prices; performance \u2014 fastest routes."
+     }
+    },
+    "required": [
+     "allowed_domains",
+     "routing_strategy"
+    ],
+    "additionalProperties": false
+   },
+   "ApiKeyUpdateRequest": {
+    "type": "object",
+    "properties": {
+     "allowed_domains": {
+      "type": "array",
+      "items": {
+       "type": "string"
+      },
+      "description": "Replace allowed domains list. Omit to keep current value.",
+      "nullable": true
+     },
+     "name": {
+      "type": "string",
+      "description": "Update friendly name. Omit to keep current value.",
+      "nullable": true
+     },
+     "active": {
+      "type": "boolean",
+      "description": "Activate or deactivate the key. Omit to keep current value.",
+      "nullable": true
+     }
+    },
+    "additionalProperties": false
+   },
+   "ApiKeyCreatedResponse": {
+    "type": "object",
+    "properties": {
+     "id": {
+      "type": "integer"
+     },
+     "customer_id": {
+      "type": "integer"
+     },
+     "allowed_domains": {
+      "type": "array",
+      "items": {
+       "type": "string"
+      }
+     },
+     "api_key": {
+      "type": "string",
+      "description": "The secret API key. Save this \u2014 it is returned only once."
+     },
+     "created_at": {
+      "type": "string",
+      "format": "date-time"
+     },
+     "updated_at": {
+      "type": "string",
+      "format": "date-time"
+     },
+     "name": {
+      "type": "string",
+      "nullable": true
+     },
+     "routing_strategy": {
+      "type": "string",
+      "enum": [
+       "economy",
+       "performance"
+      ]
+     },
+     "active": {
+      "type": "boolean"
+     },
+     "bypass_credit_check": {
+      "type": "boolean"
+     }
+    },
+    "required": [
+     "id",
+     "customer_id",
+     "allowed_domains",
+     "api_key",
+     "created_at",
+     "updated_at",
+     "name",
+     "routing_strategy",
+     "active",
+     "bypass_credit_check"
+    ],
+    "additionalProperties": false
+   },
+   "ApiKeyResponse": {
+    "type": "object",
+    "properties": {
+     "id": {
+      "type": "integer",
+      "description": "Internal key ID (for filtering /usage)."
+     },
+     "name": {
+      "type": "string",
+      "nullable": true,
+      "description": "Friendly name."
+     },
+     "active": {
+      "type": "boolean",
+      "description": "Whether the key is active."
+     },
+     "allowed_domains": {
+      "type": "array",
+      "items": {
+       "type": "string"
+      },
+      "description": "Allowed domains."
+     },
+     "routing_strategy": {
+      "type": "string",
+      "enum": [
+       "economy",
+       "performance"
+      ]
+     },
+     "created_at": {
+      "type": "string",
+      "format": "date-time"
+     },
+     "updated_at": {
+      "type": "string",
+      "format": "date-time"
+     }
+    },
+    "required": [
+     "id",
+     "name",
+     "active",
+     "allowed_domains",
+     "routing_strategy",
+     "created_at",
+     "updated_at"
+    ],
+    "additionalProperties": false
+   },
+   "UsagePeriod": {
+    "type": "object",
+    "properties": {
+     "from": {
+      "type": "string",
+      "format": "date-time"
+     },
+     "to": {
+      "type": "string",
+      "format": "date-time"
+     }
+    },
+    "required": [
+     "from",
+     "to"
+    ]
+   },
+   "UsageSummary": {
+    "type": "object",
+    "properties": {
+     "credits_consumed": {
+      "type": "number",
+      "description": "Total credits spent in the period."
+     },
+     "request_count": {
+      "type": "integer",
+      "format": "int64",
+      "description": "Total number of requests."
+     },
+     "credits_per_request": {
+      "type": "number",
+      "description": "Average cost per request."
+     }
+    },
+    "required": [
+     "credits_consumed",
+     "request_count",
+     "credits_per_request"
+    ]
+   },
+   "UsageBalance": {
+    "type": "object",
+    "properties": {
+     "credits": {
+      "type": "number",
+      "description": "Current credit balance."
+     },
+     "as_of": {
+      "type": "string",
+      "format": "date-time",
+      "description": "Timestamp of the balance snapshot."
+     }
+    },
+    "required": [
+     "credits",
+     "as_of"
+    ]
+   },
+   "UsageByChain": {
+    "type": "object",
+    "properties": {
+     "chain_id": {
+      "type": "string"
+     },
+     "credits_consumed": {
+      "type": "number"
+     },
+     "request_count": {
+      "type": "integer",
+      "format": "int64"
+     }
+    },
+    "required": [
+     "chain_id",
+     "credits_consumed",
+     "request_count"
+    ]
+   },
+   "UsageByAPIKey": {
+    "type": "object",
+    "properties": {
+     "api_key_id": {
+      "type": "integer"
+     },
+     "name": {
+      "type": "string",
+      "nullable": true
+     },
+     "key_hint": {
+      "type": "string",
+      "description": "Masked API key (e.g. rm_a\u2026456)."
+     },
+     "credits_consumed": {
+      "type": "number"
+     },
+     "request_count": {
+      "type": "integer",
+      "format": "int64"
+     }
+    },
+    "required": [
+     "api_key_id",
+     "key_hint",
+     "credits_consumed",
+     "request_count"
+    ]
+   },
+   "UsageByAPIKeyChain": {
+    "type": "object",
+    "properties": {
+     "api_key_id": {
+      "type": "integer"
+     },
+     "name": {
+      "type": "string",
+      "nullable": true
+     },
+     "key_hint": {
+      "type": "string"
+     },
+     "chain_id": {
+      "type": "string"
+     },
+     "credits_consumed": {
+      "type": "number"
+     },
+     "request_count": {
+      "type": "integer",
+      "format": "int64"
+     }
+    },
+    "required": [
+     "api_key_id",
+     "key_hint",
+     "chain_id",
+     "credits_consumed",
+     "request_count"
+    ]
+   },
+   "UsageTopMethod": {
+    "type": "object",
+    "properties": {
+     "method": {
+      "type": "string"
+     },
+     "credits_consumed": {
+      "type": "number"
+     },
+     "request_count": {
+      "type": "integer",
+      "format": "int64"
+     }
+    },
+    "required": [
+     "method",
+     "credits_consumed",
+     "request_count"
+    ]
+   },
+   "UsageTimeSeriesPoint": {
+    "type": "object",
+    "properties": {
+     "bucket": {
+      "type": "string",
+      "format": "date-time"
+     },
+     "credits_consumed": {
+      "type": "number"
+     },
+     "request_count": {
+      "type": "integer",
+      "format": "int64"
+     }
+    },
+    "required": [
+     "bucket",
+     "credits_consumed",
+     "request_count"
+    ]
+   },
+   "UsageByScenario": {
+    "type": "object",
+    "properties": {
+     "scenario": {
+      "type": "string",
+      "description": "Outcome scenario (e.g. first_hop_success, retry, timeout)."
+     },
+     "credits_consumed": {
+      "type": "number"
+     },
+     "request_count": {
+      "type": "integer",
+      "format": "int64"
+     }
+    },
+    "required": [
+     "scenario",
+     "credits_consumed",
+     "request_count"
+    ]
+   },
+   "UsageResponse": {
+    "type": "object",
+    "properties": {
+     "customer_id": {
+      "type": "integer"
+     },
+     "period": {
+      "$ref": "#/components/schemas/UsagePeriod"
+     },
+     "summary": {
+      "$ref": "#/components/schemas/UsageSummary",
+      "description": "Aggregate credits and request count."
+     },
+     "balance": {
+      "$ref": "#/components/schemas/UsageBalance",
+      "description": "Current credit balance."
+     },
+     "by_chain": {
+      "type": "array",
+      "items": {
+       "$ref": "#/components/schemas/UsageByChain"
+      },
+      "description": "Per-chain breakdown."
+     },
+     "by_api_key": {
+      "type": "array",
+      "items": {
+       "$ref": "#/components/schemas/UsageByAPIKey"
+      },
+      "description": "Per-API-key breakdown."
+     },
+     "by_api_key_chain": {
+      "type": "array",
+      "items": {
+       "$ref": "#/components/schemas/UsageByAPIKeyChain"
+      },
+      "description": "Per-API-key, per-chain breakdown."
+     },
+     "top_methods": {
+      "type": "array",
+      "items": {
+       "$ref": "#/components/schemas/UsageTopMethod"
+      },
+      "description": "Top RPC methods by spend."
+     },
+     "time_series": {
+      "type": "array",
+      "items": {
+       "$ref": "#/components/schemas/UsageTimeSeriesPoint"
+      },
+      "description": "Time-bucketed usage data."
+     },
+     "by_scenario": {
+      "type": "array",
+      "items": {
+       "$ref": "#/components/schemas/UsageByScenario"
+      },
+      "description": "Usage by routing outcome scenario."
+     },
+     "groups": {
+      "type": "array",
+      "items": {
+       "type": "object",
+       "properties": {
+        "api_key_id": {
+         "type": "integer",
+         "nullable": true
+        },
+        "name": {
+         "type": "string",
+         "nullable": true
+        },
+        "key_hint": {
+         "type": "string",
+         "nullable": true
+        },
+        "chain_id": {
+         "type": "string",
+         "nullable": true
+        },
+        "method": {
+         "type": "string",
+         "nullable": true
+        },
+        "scenario": {
+         "type": "string",
+         "nullable": true
+        },
+        "day": {
+         "type": "string",
+         "nullable": true
+        },
+        "credits_consumed": {
+         "type": "number"
+        },
+        "request_count": {
+         "type": "integer",
+         "format": "int64"
+        }
+       },
+       "required": [
+        "credits_consumed",
+        "request_count"
+       ]
+      },
+      "description": "Grouped results when group_by is specified."
+     }
+    },
+    "required": [
+     "customer_id",
+     "period"
+    ],
+    "additionalProperties": false
+   }
+  },
+  "headers": {
+   "XBatchId": {
+    "description": "Correlation ID for this HTTP request. Save it and share with RouteMesh support to help trace requests across logs and analytics.",
+    "schema": {
+     "type": "string"
+    },
+    "example": "1f4f3b23-1c2b-4c87-9c2f-7e2e0f0df4b5"
+   }
+  }
+ }
 }
