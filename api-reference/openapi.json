@@ -11,12 +11,16 @@
  },
  "servers": [
   {
+   "url": "https://api.routeme.sh",
+   "description": "API server \u2014 health, chains, API keys, usage, and public submissions"
+  },
+  {
    "url": "https://lb.routeme.sh",
-   "description": "Primary API endpoint"
+   "description": "RPC router (primary load balancer)"
   },
   {
    "url": "https://lb2.routeme.sh",
-   "description": "AWS DNS load balancer (backup)"
+   "description": "RPC router (AWS backup load balancer)"
   }
  ],
  "security": [],
@@ -28,6 +32,10 @@
   {
    "name": "Chains",
    "description": "Discover supported chains."
+  },
+  {
+   "name": "Submissions",
+   "description": "Public chain and node listing requests (rate-limited per IP)."
   },
   {
    "name": "API Keys",
@@ -80,7 +88,12 @@
       }
      }
     }
-   }
+   },
+   "servers": [
+    {
+     "url": "https://api.routeme.sh"
+    }
+   ]
   },
   "/chains": {
    "get": {
@@ -111,7 +124,12 @@
       "description": "Internal server error"
      }
     }
-   }
+   },
+   "servers": [
+    {
+     "url": "https://api.routeme.sh"
+    }
+   ]
   },
   "/rpc/{chainId}/{apiKey}": {
    "post": {
@@ -209,7 +227,17 @@
       "description": "Gateway timeout (router timed out waiting for upstream providers)"
      }
     }
-   }
+   },
+   "servers": [
+    {
+     "url": "https://lb.routeme.sh",
+     "description": "Primary RPC router"
+    },
+    {
+     "url": "https://lb2.routeme.sh",
+     "description": "AWS backup RPC router"
+    }
+   ]
   },
   "/api-keys": {
    "get": {
@@ -286,68 +314,12 @@
       "description": "Internal server error"
      }
     }
-   }
-  },
-  "/api-keys/{apiKey}": {
-   "put": {
-    "operationId": "updateApiKey",
-    "tags": [
-     "API Keys"
-    ],
-    "summary": "Update API key",
-    "description": "Partially updates an API key. Omitted fields (not included in body) leave the stored value unchanged.",
-    "security": [
-     {
-      "MgmtKeyAuth": []
-     }
-    ],
-    "parameters": [
-     {
-      "name": "apiKey",
-      "in": "path",
-      "required": true,
-      "description": "The API key string (not the numeric ID).",
-      "schema": {
-       "type": "string"
-      },
-      "example": "rm_abc123def456..."
-     }
-    ],
-    "requestBody": {
-     "required": true,
-     "content": {
-      "application/json": {
-       "schema": {
-        "$ref": "#/components/schemas/ApiKeyUpdateRequest"
-       }
-      }
-     }
-    },
-    "responses": {
-     "200": {
-      "description": "API key updated",
-      "content": {
-       "application/json": {
-        "schema": {
-         "$ref": "#/components/schemas/ApiKeyResponse"
-        }
-       }
-      }
-     },
-     "400": {
-      "description": "Bad request (invalid domains or missing API key)"
-     },
-     "401": {
-      "description": "Unauthorized"
-     },
-     "404": {
-      "description": "API key not found"
-     },
-     "500": {
-      "description": "Internal server error"
-     }
+   },
+   "servers": [
+    {
+     "url": "https://api.routeme.sh"
     }
-   }
+   ]
   },
   "/usage": {
    "get": {
@@ -465,6 +437,181 @@
      },
      "503": {
       "description": "Usage data temporarily unavailable (ClickHouse)"
+     }
+    }
+   },
+   "servers": [
+    {
+     "url": "https://api.routeme.sh"
+    }
+   ]
+  },
+  "/api-keys/{id}": {
+   "servers": [
+    {
+     "url": "https://api.routeme.sh"
+    }
+   ],
+   "put": {
+    "operationId": "updateApiKey",
+    "tags": [
+     "API Keys"
+    ],
+    "summary": "Update API key",
+    "description": "Partially updates one of the authenticated customer's API keys by numeric ID. Omitted fields leave the stored value unchanged. Use the id from GET /api-keys.",
+    "security": [
+     {
+      "MgmtKeyAuth": []
+     }
+    ],
+    "parameters": [
+     {
+      "name": "id",
+      "in": "path",
+      "required": true,
+      "description": "Numeric API key ID (from GET /api-keys). Not the secret rm_ key string.",
+      "schema": {
+       "type": "integer"
+      },
+      "example": 1
+     }
+    ],
+    "requestBody": {
+     "required": true,
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/ApiKeyUpdateRequest"
+       }
+      }
+     }
+    },
+    "responses": {
+     "200": {
+      "description": "API key updated",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/ApiKeyResponse"
+        }
+       }
+      }
+     },
+     "400": {
+      "description": "Bad request (invalid domains or non-numeric id)"
+     },
+     "401": {
+      "description": "Unauthorized"
+     },
+     "404": {
+      "description": "API key not found"
+     },
+     "500": {
+      "description": "Internal server error"
+     }
+    }
+   }
+  },
+  "/chains/requests": {
+   "servers": [
+    {
+     "url": "https://api.routeme.sh"
+    }
+   ],
+   "post": {
+    "operationId": "submitChainRequest",
+    "tags": [
+     "Submissions"
+    ],
+    "summary": "Submit chain request",
+    "description": "Public endpoint to request listing a new chain. Rate-limited to 5 submissions per IP per day. Optional X-Api-Key with an admin or agent management token skips the per-IP limit. Submitted RPC URLs are screened; at least one must qualify.",
+    "requestBody": {
+     "required": true,
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/ChainRequestCreate"
+       }
+      }
+     }
+    },
+    "responses": {
+     "201": {
+      "description": "Chain request created",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/SubmissionCreatedResponse"
+        }
+       }
+      }
+     },
+     "400": {
+      "description": "Validation or screening failure"
+     },
+     "401": {
+      "description": "Unauthorized (invalid X-Api-Key when provided)"
+     },
+     "409": {
+      "description": "Chain already exists or pending request exists for this chain ID"
+     },
+     "429": {
+      "description": "Per-IP daily submission limit exceeded"
+     },
+     "500": {
+      "description": "Internal server error"
+     }
+    }
+   }
+  },
+  "/nodes/requests": {
+   "servers": [
+    {
+     "url": "https://api.routeme.sh"
+    }
+   ],
+   "post": {
+    "operationId": "submitNodeRequest",
+    "tags": [
+     "Submissions"
+    ],
+    "summary": "Submit node request",
+    "description": "Public endpoint to request listing a new RPC node. Rate-limited to 3 submissions per IP per day. Optional X-Api-Key with an admin or agent management token skips the per-IP limit. The node URL must be HTTPS and pass mandatory EVM screening.",
+    "requestBody": {
+     "required": true,
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/NodeRequestCreate"
+       }
+      }
+     }
+    },
+    "responses": {
+     "201": {
+      "description": "Node request created",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/SubmissionCreatedResponse"
+        }
+       }
+      }
+     },
+     "400": {
+      "description": "Validation or screening failure"
+     },
+     "401": {
+      "description": "Unauthorized (invalid X-Api-Key when provided)"
+     },
+     "409": {
+      "description": "Node URL already exists or pending request exists"
+     },
+     "429": {
+      "description": "Per-IP daily submission limit exceeded"
+     },
+     "500": {
+      "description": "Internal server error"
      }
     }
    }
@@ -1070,6 +1217,126 @@
     "required": [
      "customer_id",
      "period"
+    ],
+    "additionalProperties": false
+   },
+   "ChainRequestCreate": {
+    "type": "object",
+    "properties": {
+     "name": {
+      "type": "string"
+     },
+     "chain_id": {
+      "type": "string",
+      "description": "Decimal or 0x-prefixed chain ID (e.g. \"137\")."
+     },
+     "short_name": {
+      "type": "string"
+     },
+     "native_currency_name": {
+      "type": "string"
+     },
+     "native_currency_decimals": {
+      "type": "integer",
+      "minimum": 0,
+      "default": 0
+     },
+     "info_url": {
+      "type": "string",
+      "format": "uri"
+     },
+     "icon_url": {
+      "type": "string",
+      "format": "uri",
+      "nullable": true
+     },
+     "rpc_urls": {
+      "type": "array",
+      "items": {
+       "type": "string",
+       "format": "uri"
+      },
+      "minItems": 1,
+      "maxItems": 5,
+      "description": "HTTPS RPC URLs to screen (max 5). At least one must pass screening."
+     },
+     "explorer_urls": {
+      "type": "array",
+      "items": {
+       "type": "string",
+       "format": "uri"
+      }
+     },
+     "requestor_email": {
+      "type": "string",
+      "format": "email"
+     },
+     "requestor_name": {
+      "type": "string"
+     }
+    },
+    "required": [
+     "name",
+     "chain_id",
+     "short_name",
+     "native_currency_name",
+     "info_url",
+     "rpc_urls",
+     "requestor_email",
+     "requestor_name"
+    ],
+    "additionalProperties": false
+   },
+   "NodeRequestCreate": {
+    "type": "object",
+    "properties": {
+     "name": {
+      "type": "string"
+     },
+     "url": {
+      "type": "string",
+      "format": "uri",
+      "description": "HTTPS RPC endpoint URL."
+     },
+     "vm": {
+      "type": "string",
+      "enum": [
+       "evm"
+      ],
+      "description": "Virtual machine type (currently only evm)."
+     },
+     "email": {
+      "type": "string",
+      "format": "email"
+     },
+     "privacy_policy_url": {
+      "type": "string",
+      "format": "uri",
+      "nullable": true
+     },
+     "notes": {
+      "type": "string",
+      "nullable": true
+     }
+    },
+    "required": [
+     "name",
+     "url",
+     "vm",
+     "email"
+    ],
+    "additionalProperties": false
+   },
+   "SubmissionCreatedResponse": {
+    "type": "object",
+    "properties": {
+     "id": {
+      "type": "integer",
+      "description": "Created request ID."
+     }
+    },
+    "required": [
+     "id"
     ],
     "additionalProperties": false
    }
