@@ -692,11 +692,11 @@
     "properties": {
      "code": {
       "type": "integer",
-      "description": "Router error codes: -32700 (parse error), -32600 (invalid request), -32602 (invalid params), -32603 (internal error), -32000 (server error), -32001 (chain not supported), -32002 (method not supported), -32003 (all nodes on cooldown)."
+      "description": "Router error codes: -32700 (parse error), -32600 (invalid request), -32602 (invalid params or eth_getLogs block span too large), -32603 (internal error), -32000 (server error), -32001 (chain not supported), -32002 (method not supported), -32003 (all nodes on cooldown), -32005 (eth_getLogs query limit exceeded)."
      },
      "message": {
       "type": "string",
-      "description": "Human-readable error message."
+      "description": "Human-readable error message. eth_getLogs limit errors may include a block-range hint suffix: \"; try a block range of at most N blocks\"."
      },
      "data": {
       "description": "Optional additional error data."

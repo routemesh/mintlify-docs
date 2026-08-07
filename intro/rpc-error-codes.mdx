@@ -12,24 +12,70 @@ For a successful HTTP 200, the response may still contain a JSON-RPC `error` (e.
 | :----- | :------------------- | :---------------------------------------------------------------------- |
 | -32700 | Parse error          | Request body is not valid JSON.                                         |
 | -32600 | Invalid request      | Malformed JSON-RPC (e.g. missing required fields) or an empty batch.  |
-| -32602 | Invalid params       | `chainId` is missing or invalid in the request path.                   |
+| -32602 | Invalid params       | Invalid `chainId` in the request path, or an `eth_getLogs` block span that exceeds the router limit. |
 | -32603 | Internal error       | Router encountered an internal failure. Contact support if persistent. |
 | -32000 | Server error         | Unspecified server error (fallback when no specific code applies).     |
 | -32001 | Chain not supported  | The given `chainId` has no available nodes or paid plan support.       |
 | -32002 | Method not supported | The JSON-RPC method is not enabled for this chain.                     |
 | -32003 | All nodes on cooldown| Every node that could serve the route is temporarily in cooldown (e.g. after rate limits or errors). Retry after a short delay. |
+| -32005 | Limit exceeded       | An `eth_getLogs` query matched too many logs or produced a response that is too large for the requested block span. See [eth_getLogs limits](/intro/request-behavior#eth_getlogs-limits). |
 
 ## Standard JSON-RPC codes
 
 - **-32700** and **-32600** follow the [JSON-RPC 2.0 spec](https://www.jsonrpc.org/specification#error_object) for parse and invalid request errors.
-- **-32602** is used for invalid `chainId` (invalid params).
+- **-32602** is used for invalid `chainId` (invalid params) and for `eth_getLogs` block-span rejections.
 - **-32603** is used for internal router errors.
+- **-32005** follows [EIP-1474](https://eips.ethereum.org/EIPS/eip-1474#error-codes) (limit exceeded) for `eth_getLogs` query-density failures.
 - **-32xxx** in the -32000 range are router-specific and documented above.
+
+## eth_getLogs error messages
+
+RouteMesh normalizes upstream `eth_getLogs` limit errors into two client-facing shapes. Hints appear in `error.message` (not a separate field):
+
+| Code   | Base message              | When it occurs |
+| :----- | :------------------------ | :------------- |
+| -32602 | `block range too large`   | The requested `fromBlock`/`toBlock` span exceeds the router maximum (10,000 blocks), or upstream rejected the span as too wide. |
+| -32005 | `query exceeds max results` | The block span is within limits, but the filter is too dense (too many matching logs or a payload that is too large). Narrow the range or add filter constraints (e.g. `address`, `topics`). |
+
+When the router can suggest a smaller span, the message includes a hint suffix:
+
+```text
+; try a block range of at most N blocks
+```
+
+Example (`-32602`, block span too large):
+
+```json
+{
+  "jsonrpc": "2.0",
+  "id": 1,
+  "error": {
+    "code": -32602,
+    "message": "block range too large; try a block range of at most 10000 blocks"
+  }
+}
+```
+
+Example (`-32005`, query too dense):
+
+```json
+{
+  "jsonrpc": "2.0",
+  "id": 2,
+  "error": {
+    "code": -32005,
+    "message": "query exceeds max results; try a block range of at most 1025 blocks"
+  }
+}
+```
+
+If no hint is available, the message contains only the base text (no suffix).
 
 ## What to do when you see an error
 
 - **-32700 / -32600**: Fix the request payload (valid JSON, non-empty batch, required fields present).
-- **-32602**: Check the URL path; ensure `chainId` is present and correct. Use the [API Reference](/api-reference) (GET /chains) to see supported chain IDs.
+- **-32602**: Check the URL path for a valid `chainId`. For `eth_getLogs`, reduce `toBlock - fromBlock` or split the query into smaller chunks. Use the hint suffix when present.
+- **-32005**: The block span is acceptable but the filter returned too much data. Narrow `fromBlock`/`toBlock` using the hint, or tighten `address`/`topics`. See [Request behavior: eth_getLogs limits](/intro/request-behavior#eth_getlogs-limits).
 - **-32001**: Use a supported chain or contact us to request support for a new chain.
 - **-32002**: The method is not available for this chain; use a different method or chain.
 - **-32003**: Retry after a short backoff; cooldowns are temporary. See [Request behavior: Cooldowns and rate limiting](/intro/request-behavior#cooldowns-and-rate-limiting) for details.
