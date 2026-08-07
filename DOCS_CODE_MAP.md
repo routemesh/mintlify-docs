@@ -17,8 +17,8 @@ Use this map to verify that **mintlify-docs** stays in sync with the **routemesh
 |-----|----------------|------------|
 | **getting-started** | Billing URL, dashboard URL, login URL, RPC base URL, chains URL | `front-end/src/lib/constants/external-links.ts`, `front-end/vercel.json` or env for app URL; atlas route path `/rpc/:chainId/:apiKey` |
 | **how-it-works** | Terminology (provider, node, route, pathway); routing steps; data quality mention | `atlas/` routing flow; `intro/data-quality.mdx` link |
-| **request-behavior** | Cooldowns, 429 on all cooldown, **-32003** code and message "All nodes on cooldown" | `atlas/common/json-rpc/json-rpc.go` (error codes), `atlas/common/custom-errors/custom-errors.go` (`ErrAllNodesOnCooldown`), `atlas/common/node-processor/http-status-aggregator.go` (when 429/503 trigger cooldown) |
-| **rpc-error-codes** | All codes: -32700, -32600, -32602, -32601?, -32000, -32001, -32002, -32003; messages | `atlas/common/json-rpc/json-rpc.go` (switch on custom_errors), `atlas/common/custom-errors/custom-errors.go` |
+| **request-behavior** | Cooldowns, 429 on all cooldown, **-32003** code; **eth_getLogs** limits (-32602 block span, -32005 query density); hint suffix in `error.message` | `atlas/api/rpc/eth-getlogs-range-validator.go`, `atlas/common/node-processor/handlers/eth-get-logs-oversized-error-normalizer.go`, `atlas/common/node-processor/node-processor.go` (`normalizeEthGetLogsOversizedHandlerEvaluation`), `atlas/common/node-processor/http-status-aggregator.go` |
+| **rpc-error-codes** | All codes: -32700, -32600, -32602, -32603, -32000, -32001, -32002, -32003, -32005; eth_getLogs normalized messages | `atlas/api/rpc/jsonrpc-errors.go`, `atlas/common/custom-errors/custom-errors.go` (`ErrBlockRangeTooLarge`, `ErrEthGetLogsResultCountExceeded`, `EthGetLogsHintError`), `atlas/common/node-processor/handlers/eth-get-logs-oversized-error-normalizer.go` |
 | **debugging** | `X-Batch-Id` header name; RPC URL pattern `lb.routeme.sh/rpc/{chain_id}/{api_key}`; Logs page URL | Atlas or gateway: where response headers are set (BatchID exists in `atlas/api/rpc/handle-rpc-requests.go`, `atlas/common/models/request-context.go`). Front-end logs: `front-end/src/app/(protected)/app/consumer/logs/` |
 | **data-quality** | Sentinel concepts (replay, lag, staging); no need to sync exact thresholds/strike counts (keep docs high-level) | `sentinel/` (replay in `common/replay/`, lag in `common/lag/`, config in `config.yaml`). Consumer doc can stay conceptual. |
 | **redundancy** | lb.routeme.sh, lb2.routeme.sh; Cloudflare vs AWS; 15s failover | Infrastructure/config (may live outside repo or in terraform). |
@@ -48,7 +48,7 @@ Use this map to verify that **mintlify-docs** stays in sync with the **routemesh
 
 | Asset | What to verify | Code paths |
 |-------|----------------|------------|
-| **api-reference/openapi.json** | Server URLs (routeme.sh, lb, lb2); error codes in descriptions; `X-Batch-Id` in responses; path `/rpc/{chain_id}/{api_key}` | `atlas/api/rpc/rpc.go` (route registration); `atlas/common/json-rpc/json-rpc.go` (codes); OpenAPI spec source if generated from code. |
+| **api-reference/openapi.json** | Server URLs (routeme.sh, lb, lb2); error codes in descriptions; `X-Batch-Id` in responses; path `/rpc/{chain_id}/{api_key}`; eth_getLogs -32602/-32005 | `atlas/api/rpc/rpc.go` (route registration); `atlas/api/rpc/jsonrpc-errors.go` (codes); `atlas/common/node-processor/handlers/eth-get-logs-oversized-error-normalizer.go` |
 
 ---
 

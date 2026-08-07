@@ -2,9 +2,20 @@
 title: "Request Behavior"
 ---
 
-This page explains how RouteMesh handles your RPC requests: **allowed domains** for API keys, **cooldowns and rate limiting**, and **batch requests**.
+This page explains how RouteMesh handles your RPC requests: **allowed domains** for API keys, **cooldowns and rate limiting**, **batch requests**, and **eth_getLogs limits**.
 
-For `eth_getLogs`, RouteMesh currently supports a maximum block range of `10,000` per request.
+## eth_getLogs limits
+
+RouteMesh enforces a maximum block span of **10,000 blocks** per `eth_getLogs` request when both `fromBlock` and `toBlock` are fixed hex values. Dynamic tags (`latest`, `safe`, `finalized`, `pending`) are not pre-validated against this limit.
+
+When a request exceeds a limit, the router returns a normalized JSON-RPC error with an actionable hint in `error.message`. See [RPC Error Codes](/intro/rpc-error-codes#eth_getlogs-error-messages) for the full code table.
+
+| Situation | Code | What to do |
+| :-------- | :--- | :--------- |
+| Block span exceeds 10,000 blocks | **-32602** (`block range too large`) | Split the query into smaller `fromBlock`/`toBlock` windows. Use the `; try a block range of at most N blocks` hint when present. |
+| Span is within limits but too many logs match | **-32005** (`query exceeds max results`) | Narrow the block range using the hint, or tighten filters (`address`, `topics`). Common for unfiltered or high-volume contracts. |
+
+**Retry pattern:** On `-32005`, halve the block span and retry until the query succeeds, then widen gradually if needed. On `-32602`, stay at or below the hinted maximum span.
 
 ## Allowed domains
 
