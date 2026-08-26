@@ -8,6 +8,8 @@ Use this map to verify that **mintlify-docs** stays in sync with the **routemesh
 - `front-end/` — Dashboard, provider portal, consumer app, URLs, nav
 - `mintlify-docs/` — This documentation site
 - `api-reference/openapi.json` — API spec (should match atlas + any gateway that sets headers)
+- `routemesh-mcp/` — `@routemesh/mcp` MCP server (Node/TS)
+- `api/` — API server (`api.routeme.sh`: mgmt tokens, usage, API keys, chains)
 
 ---
 
@@ -23,6 +25,7 @@ Use this map to verify that **mintlify-docs** stays in sync with the **routemesh
 | **data-quality** | Sentinel concepts (replay, lag, staging); no need to sync exact thresholds/strike counts (keep docs high-level) | `sentinel/` (replay in `common/replay/`, lag in `common/lag/`, config in `config.yaml`). Consumer doc can stay conceptual. |
 | **redundancy** | lb.routeme.sh, lb2.routeme.sh; Cloudflare vs AWS; 15s failover | Infrastructure/config (may live outside repo or in terraform). |
 | **network-support** | support@routeme.sh; Lite vs Full support (if referenced) | Front-end or backend chain-support logic. |
+| **mcp-server** | Tool list + parameters (all `rpc_*` + `get_usage`, `list_api_keys`, `create_api_key`, `update_api_key`); env vars and defaults (`ROUTEMESH_API_KEY`, `ROUTEMESH_MGMT_TOKEN`, `ROUTEMESH_API_SERVER_URL`, `ROUTEMESH_BASE_URL`, `ROUTEMESH_BACKUP_BASE_URL`, `ROUTEMESH_TIMEOUT_MS`, `ROUTEMESH_RETRY_ATTEMPTS`); failover/retry behavior; mgmt token flow (dashboard **Mgmt Tokens** page, one-time secret, customer-tier scope) | `routemesh-mcp/src/tools/read-tools.ts` (RPC tool schemas), `routemesh-mcp/src/tools/customer-tools.ts` + `src/tools/api-keys-tools.ts` (customer tool schemas), `routemesh-mcp/src/config/env.ts` (env vars + defaults), `routemesh-mcp/src/routemesh/client.ts` (retry/failover, `/rpc/{chainId}/{apiKey}`), `routemesh-mcp/src/api-server/client.ts` (mgmt token in `x-api-key`), `api/api/middleware/mgmtauth/mgmtauth.go` + `api/apikeys/apikeys.go` + `api/usage/usage.go` (customer-tier route scope), `front-end/src/app/(protected)/app/consumer/mgmt-tokens/` (token create UI) |
 | **routing-strategies** | Economy vs performance; strategy names | `atlas/` routing + `front-end` (e.g. strategy filters). |
 | **pricing-model** | Credits, pricing page URL | `front-end` billing/pricing; external-links. |
 | **updates** | Changelog or update content | Editorial; optional link to updates source. |
