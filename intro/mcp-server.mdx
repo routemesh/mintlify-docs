@@ -1,0 +1,136 @@
+---
+title: "MCP Server"
+---
+
+`@routemesh/mcp` is a local MCP server that lets AI coding agents query blockchain data through RouteMesh. Configure it once and your agent gets cross-chain RPC tools — blocks, transactions, logs, balances, fees — plus optional tools to view usage and manage your API keys.
+
+- Query 1000+ EVM chains from one server — no per-chain endpoint config.
+- Read-only on-chain tools, plus a generic `rpc_call` escape hatch for any JSON-RPC method.
+- Automatic failover: requests retry against `lb2.routeme.sh` when `lb.routeme.sh` returns retryable errors.
+- Every result carries the `X-Batch-Id` correlation id, so you can trace requests in the [Logs page](https://routeme.sh/app/consumer/logs).
+
+## **How it works**
+
+The server runs locally as a stdio process spawned by your MCP client (Cursor, Claude Desktop, VS Code, or any other stdio MCP client). It keeps no state and runs no background services:
+
+- **RPC tools** send JSON-RPC to `POST /rpc/{chain_id}/{api_key}`, using your `ROUTEMESH_API_KEY` in the URL path.
+- **Customer tools** (usage and API keys) call `https://api.routeme.sh` with a customer management token in the `X-Api-Key` header. They are only exposed when the `ROUTEMESH_MGMT_TOKEN` env var is set.
+- On retryable failures (HTTP 429 or 5xx, timeouts, network errors), the server retries with exponential backoff, alternating between the primary and backup load balancers.
+
+All on-chain tools are read-only. The customer tools can create and update API keys, so use a dedicated management token for them.
+
+## **Prerequisites**
+
+- Node.js 20 or later
+- A RouteMesh API key — see [Quick Start](/intro/quick-start)
+- A customer management token — optional, only needed for the customer tools
+
+## **Setup**
+
+### **Configure your MCP client**
+
+In **Cursor**, add the following to `~/.cursor/mcp.json`:
+
+```json
+{
+  "mcpServers": {
+    "routemesh": {
+      "command": "npx",
+      "args": ["-y", "@routemesh/mcp"],
+      "env": {
+        "ROUTEMESH_API_KEY": "your_routemesh_api_key"
+      }
+    }
+  }
+}
+```
+
+Any stdio MCP client uses the same shape: command `npx`, args `-y @routemesh/mcp`, and the environment variables below. In Claude Desktop, this goes in `claude_desktop_config.json`.
+
+### **Environment variables**
+
+| Variable                    | Required | Default                  | Description                                                                                                          |
+| :-------------------------- | :------- | :----------------------- | :------------------------------------------------------------------------------------------------------------------- |
+| `ROUTEMESH_API_KEY`         | yes      | —                        | Your RouteMesh API key, used in the RPC URL path.                                                                     |
+| `ROUTEMESH_MGMT_TOKEN`      | no       | —                        | Customer management token. When set, the server also exposes the [customer tools](#customer-tools).                   |
+| `ROUTEMESH_API_SERVER_URL`  | no       | `https://api.routeme.sh` | Base URL for chain discovery and the customer tools.                                                                  |
+| `ROUTEMESH_BASE_URL`        | no       | `https://lb.routeme.sh`  | Primary RPC router.                                                                                                   |
+| `ROUTEMESH_BACKUP_BASE_URL` | no       | `https://lb2.routeme.sh` | Backup RPC router, used on retry.                                                                                     |
+| `ROUTEMESH_TIMEOUT_MS`      | no       | `20000`                  | Per-request timeout in milliseconds (1000–120000).                                                                    |
+| `ROUTEMESH_RETRY_ATTEMPTS`  | no       | `2`                      | Extra retry attempts on retryable failures (0–5).                                                                     |
+
+The defaults work for all RouteMesh customers — in most setups you only need `ROUTEMESH_API_KEY`.
+
+## **Tools**
+
+### **RPC tools**
+
+Always available. `chainId` is the numeric EVM chain ID (e.g. `1` for Ethereum mainnet, `8453` for Base). Use `rpc_list_chains` to discover chains by name or ID.
+
+| Tool                          | Description                                                          | Key parameters                                                                                                       |
+| :---------------------------- | :------------------------------------------------------------------- | :------------------------------------------------------------------------------------------------------------------- |
+| `rpc_list_chains`             | Discover chains supported by RouteMesh.                              | `query` (name substring), `chainId`, `limit` (default 50, max 500), `offset` (default 0)                             |
+| `rpc_call`                    | Call any JSON-RPC method — the escape hatch.                         | `chainId`, `method`, `params` (array, default `[]`)                                                                  |
+| `rpc_get_block`               | Fetch a block by number/tag or by hash.                              | `chainId`, `blockTag` (default `latest`), `blockHash`, `includeTransactions` (default `false`)                        |
+| `rpc_get_transaction`         | Fetch a transaction by hash.                                         | `chainId`, `txHash`                                                                                                  |
+| `rpc_get_transaction_receipt` | Fetch a receipt by hash.                                             | `chainId`, `txHash`                                                                                                  |
+| `rpc_get_logs`                | Query logs with block range and topic filters.                       | `chainId`, `fromBlock` / `toBlock` (default `latest`), `address` (single or array), `topics`                          |
+| `rpc_get_balance`             | Native token balance for an address.                                 | `chainId`, `address`, `blockTag` (default `latest`)                                                                  |
+| `rpc_call_contract`           | Read-only `eth_call` with pre-encoded calldata.                      | `chainId`, `to`, `data`, optional `from` / `gas` / `gasPrice` / `value`, `blockTag` (default `latest`)                |
+| `rpc_estimate_gas`            | `eth_estimateGas` for a transaction request.                         | `chainId`, `transaction` (standard tx fields, hex values)                                                            |
+| `rpc_get_fee_data`            | Current gas price, max priority fee, and a one-block fee history.    | `chainId`                                                                                                            |
+| `rpc_trace_transaction`       | Best-effort trace via `trace_transaction` or `debug_traceTransaction`. | `chainId`, `txHash`, `traceMethod` (default `trace_transaction`), `allowFallback` (default `true`)                  |
+
+### **Customer tools**
+
+Exposed only when `ROUTEMESH_MGMT_TOKEN` is set.
+
+| Tool               | Description                                                                                                                                             |
+| :----------------- | :-------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `get_usage`        | Usage summary, balance, and breakdowns from the API server. See the [usage parameters](#get_usage-parameters) below.                                       |
+| `list_api_keys`    | Metadata for all your API keys: id, name, active, allowed domains, routing strategy, timestamps. The secret key value is **never** returned.             |
+| `create_api_key`   | Create a key with `allowed_domains` (required), `routing_strategy` (`performance` or `economy`, required), and an optional `name`. **The secret key is shown once in the response** — store it immediately; it cannot be retrieved again. |
+| `update_api_key`   | Partial update of an existing key, addressed by its secret key string: `name`, `active`, and/or `allowed_domains`.                                         |
+
+#### **`get_usage` parameters**
+
+- `from` / `to` — RFC3339 window (e.g. `2026-06-01T00:00:00Z`). Defaults: last 30 days up to now; max span 90 days.
+- `include` — sections to return: `summary`, `balance`, `by_chain`, `by_api_key`, `by_api_key_chain`, `top_methods`, `time_series`, `by_scenario`. Default: `summary`, `balance`.
+- `groupBy` — flat grouped rows instead of sections: `chain`, `api_key`, `api_key,chain`, `method`, `day`. Overrides `include`.
+- `chainId` / `apiKeyId` — filter to one chain or one API key.
+- `granularity` — `day` or `hour` for `time_series` (default `day`).
+- `limit` — max rows for `top_methods` and `groupBy` (default 20, max 100).
+
+## **Management tokens**
+
+Customer tools authenticate with a customer management token. Create one in the dashboard:
+
+1. Open [Mgmt Tokens](https://routeme.sh/app/consumer/mgmt-tokens).
+2. Click **New Token** and give it a label (e.g. `mcp-cursor`).
+3. Copy the secret — it is **shown only once**.
+
+Customer management tokens are scoped automatically to your account's management routes (`GET /usage`, `GET /api-keys`, `POST /api-keys`, `PUT /api-keys/:id`) and nothing else. Use a dedicated token for the MCP server so you can revoke it independently if it leaks.
+
+## **Example prompts**
+
+- "List chains that match `base` and show me their chain IDs."
+- "Get the latest block on BSC and summarize the timestamp and transaction count."
+- "Fetch the receipt for tx `0x...` on Ethereum and tell me if it succeeded."
+- "Get logs for contract `0x...` on Arbitrum between blocks 1000000 and 1050000."
+- "Estimate gas for calling this method on Base with these parameters."
+- "Run `eth_getCode` for address `0x...` on Base (chain 8453)."
+- "Show my RouteMesh usage for the last 7 days broken down by chain."
+- "What is my current RouteMesh balance and request count this month?"
+
+## **Errors and debugging**
+
+- Tools return structured JSON. RPC errors from the router are passed through unchanged — interpret `error.code` with [RPC error codes](/intro/rpc-error-codes).
+- Retryable HTTP failures (429, 5xx, timeouts) are retried automatically up to `ROUTEMESH_RETRY_ATTEMPTS`.
+- Every RPC result includes the `batchId` from the `X-Batch-Id` response header. Use it in the [Logs page](https://routeme.sh/app/consumer/logs) exactly as you would for direct RPC calls — see [Debugging](/intro/debugging).
+- [eth_getLogs limits](/intro/request-behavior#eth_getlogs-limits) apply to `rpc_get_logs` exactly as they do to direct requests.
+
+## **Next steps**
+
+- [Quick Start](/intro/quick-start) — Get an API key and make your first request.
+- [Request behavior](/intro/request-behavior) — Cooldowns, 429s, and batch requests.
+- [Debugging](/intro/debugging) — Use `X-Batch-Id` and the Logs page when something goes wrong.

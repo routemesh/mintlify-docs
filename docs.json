@@ -36,6 +36,7 @@
             "pages": [
               "intro/request-behavior",
               "intro/debugging",
+              "intro/mcp-server",
               "intro/network-support",
               "intro/rpc-error-codes"
             ]
