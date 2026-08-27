@@ -46,6 +46,10 @@
    "description": "View your usage and billing data."
   },
   {
+   "name": "Pricing",
+   "description": "Current RPC route and websocket notification prices (public, rate-limited)."
+  },
+  {
    "name": "Health",
    "description": "Service health checks."
   }
@@ -615,6 +619,157 @@
      }
     }
    }
+  },
+  "/pricing/rpc": {
+   "servers": [
+    {
+     "url": "https://api.routeme.sh"
+    }
+   ],
+   "get": {
+    "operationId": "getRoutePrices",
+    "tags": [
+     "Pricing"
+    ],
+    "summary": "List RPC route prices",
+    "description": "Public endpoint returning current RPC route prices for each vm, chain ID, method, and routing strategy combination. No authentication required. Rate-limited per IP (default 30 requests per 60 seconds). Empty results return an empty JSON array.",
+    "parameters": [
+     {
+      "name": "vm",
+      "in": "query",
+      "description": "Filter by virtual machine type (e.g. evm).",
+      "schema": {
+       "type": "string"
+      },
+      "example": "evm"
+     },
+     {
+      "name": "chain_id",
+      "in": "query",
+      "description": "Filter by chain ID (e.g. 1, 137, 8453).",
+      "schema": {
+       "type": "string"
+      },
+      "example": "1"
+     },
+     {
+      "name": "method",
+      "in": "query",
+      "description": "Filter by JSON-RPC method (e.g. eth_blockNumber).",
+      "schema": {
+       "type": "string"
+      },
+      "example": "eth_blockNumber"
+     },
+     {
+      "name": "routing_strategy",
+      "in": "query",
+      "description": "Filter by routing strategy.",
+      "schema": {
+       "type": "string",
+       "enum": [
+        "economy",
+        "performance"
+       ]
+      },
+      "example": "economy"
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Current route prices",
+      "content": {
+       "application/json": {
+        "schema": {
+         "type": "array",
+         "items": {
+          "$ref": "#/components/schemas/RoutePrice"
+         }
+        },
+        "example": [
+         {
+          "vm": "evm",
+          "chain_id": "1",
+          "method": "eth_blockNumber",
+          "routing_strategy": "economy",
+          "price_per_million": 3
+         }
+        ]
+       }
+      }
+     },
+     "429": {
+      "description": "Rate limit exceeded (per-IP limit; default 30 requests per 60 seconds)"
+     },
+     "503": {
+      "description": "Pricing data temporarily unavailable"
+     }
+    }
+   }
+  },
+  "/pricing/ws": {
+   "servers": [
+    {
+     "url": "https://api.routeme.sh"
+    }
+   ],
+   "get": {
+    "operationId": "getWSPrices",
+    "tags": [
+     "Pricing"
+    ],
+    "summary": "List websocket notification prices",
+    "description": "Public endpoint returning current websocket notification prices per chain ID and subscription type. No authentication required. Rate-limited per IP (default 30 requests per 60 seconds). Empty results return an empty JSON array.",
+    "parameters": [
+     {
+      "name": "chain_id",
+      "in": "query",
+      "description": "Filter by chain ID (e.g. 1, 137, 8453).",
+      "schema": {
+       "type": "string"
+      },
+      "example": "1"
+     },
+     {
+      "name": "subscription_type",
+      "in": "query",
+      "description": "Filter by websocket subscription type (e.g. newHeads).",
+      "schema": {
+       "type": "string"
+      },
+      "example": "newHeads"
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Current websocket notification prices",
+      "content": {
+       "application/json": {
+        "schema": {
+         "type": "array",
+         "items": {
+          "$ref": "#/components/schemas/WSNotificationPrice"
+         }
+        },
+        "example": [
+         {
+          "vm": "evm",
+          "chain_id": "1",
+          "subscription_type": "newHeads",
+          "price_per_million": 6
+         }
+        ]
+       }
+      }
+     },
+     "429": {
+      "description": "Rate limit exceeded (per-IP limit; default 30 requests per 60 seconds)"
+     },
+     "503": {
+      "description": "Pricing data temporarily unavailable"
+     }
+    }
+   }
   }
  },
  "components": {
@@ -627,6 +782,74 @@
    }
   },
   "schemas": {
+   "RoutePrice": {
+    "type": "object",
+    "properties": {
+     "vm": {
+      "type": "string",
+      "description": "Virtual machine type (e.g. \"evm\")."
+     },
+     "chain_id": {
+      "type": "string",
+      "description": "Numeric chain ID (e.g. \"1\", \"137\", \"8453\")."
+     },
+     "method": {
+      "type": "string",
+      "description": "JSON-RPC method name (e.g. eth_blockNumber)."
+     },
+     "routing_strategy": {
+      "type": "string",
+      "enum": [
+       "economy",
+       "performance"
+      ],
+      "description": "Routing strategy the price applies to."
+     },
+     "price_per_million": {
+      "type": "number",
+      "description": "Price per one million requests."
+     }
+    },
+    "required": [
+     "vm",
+     "chain_id",
+     "method",
+     "routing_strategy",
+     "price_per_million"
+    ],
+    "additionalProperties": false
+   },
+   "WSNotificationPrice": {
+    "type": "object",
+    "properties": {
+     "vm": {
+      "type": "string",
+      "enum": [
+       "evm"
+      ],
+      "description": "Virtual machine type (currently always \"evm\")."
+     },
+     "chain_id": {
+      "type": "string",
+      "description": "Numeric chain ID (e.g. \"1\", \"137\", \"8453\")."
+     },
+     "subscription_type": {
+      "type": "string",
+      "description": "Websocket subscription type (e.g. \"newHeads\")."
+     },
+     "price_per_million": {
+      "type": "number",
+      "description": "Price per one million notifications."
+     }
+    },
+    "required": [
+     "vm",
+     "chain_id",
+     "subscription_type",
+     "price_per_million"
+    ],
+    "additionalProperties": false
+   },
    "ChainInfo": {
     "type": "object",
     "properties": {

@@ -16,4 +16,11 @@ For customers with larger sustained usage, we can offer committed use discounts 
 
 **To learn the difference Economy vs Performance keys visit the Routing Strategies page**
 
+## Look up current prices
+
+You can look up current prices programmatically with the public pricing endpoints. No API key is required, and both endpoints are rate-limited per IP (about 30 requests per 60 seconds). See the Pricing section of the API Reference for full details.
+
+- `GET /pricing/rpc` returns current RPC route prices (price per million requests) per vm, chain ID, method, and routing strategy. Optional filters: `vm`, `chain_id`, `method`, `routing_strategy`.
+- `GET /pricing/ws` returns current websocket notification prices (price per million notifications) per chain ID and subscription type. Optional filters: `chain_id`, `subscription_type`.
+
 > While route prices should trend lower over time, sometimes they can increase. In these instances, we work with our providers to get more capacity for that chain/route. This brings down our cost to serve that route and which can be passed on to you.
