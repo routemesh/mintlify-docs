@@ -53,10 +53,10 @@ The available subscription types (and their prices) can change as we add chains 
 
 ## Reliability
 
-RouteMesh runs WebSocket streams with the same redundancy we apply to HTTP RPC. You get:
+RouteMesh runs WebSocket streams with the same redundancy we apply to HTTP RPC:
 
-- **Seamless provider failover** — if the node behind your subscription goes down, RouteMesh transparently reconnects to an alternate provider and keeps your subscription alive. No action needed on your side.
-- **Gap backfill and deduplication** — on reconnection we replay any missed notifications, drop duplicate events, and keep the stream in order, so you don't lose data.
-- **Resumable streams** — you can reconnect your own client and pick up where you left off. For `newHeads` and `logs` subscriptions, gaps are reconstructed automatically.
+- **Seamless provider failover** — if the upstream node behind your subscription goes down, RouteMesh transparently reconnects to an alternate provider while keeping your connection alive. You don't need to re-subscribe.
+- **Gap backfill and deduplication** — when we fail over to an alternate provider, we replay any notifications missed during the switch, drop duplicate events, and keep the stream in order, so you don't lose data while connected.
 
-This means you can rely on WebSocket as a durable event source rather than treating it as best-effort push.
+Because this recovery happens while your connection stays open, you get a durable event stream for the lifetime of the socket. If your client disconnects, subscriptions end with the connection — reconnect and re-subscribe to continue.
+
