@@ -32,7 +32,7 @@ For a successful HTTP 200, the response may still contain a JSON-RPC `error` (e.
 ## Standard JSON-RPC codes
 
 - **-32700** and **-32600** follow the [JSON-RPC 2.0 spec](https://www.jsonrpc.org/specification#error_object) for parse and invalid request errors.
-- **-32601** follows the JSON-RPC 2.0 spec for method/params errors and is used here for an empty credit balance.
+- **-32601** is the JSON-RPC 2.0 "Method not found" code, repurposed here to signal an empty credit balance.
 - **-32602** is used for invalid `chainId` (invalid params) and for `eth_getLogs` block-span rejections.
 - **-32603** is used for internal router errors.
 - **-32005** follows [EIP-1474](https://eips.ethereum.org/EIPS/eip-1474#error-codes) (limit exceeded) for `eth_getLogs` query-density failures.
