@@ -46,20 +46,18 @@ Sentinel is built on two complementary classes of checks: Replay Checks and Lag 
 
 **Replay Checks**
 
-For every n-th request on a given chain–method combination (for example, eth_call on Ethereum), the original request parameters are asynchronously replayed in parallel against three randomly selected nodes from our inventory.
+For every n-th request on a given chain–method combination (for example, eth_call on Ethereum), the original request parameters are asynchronously replayed in parallel against a sample of nodes from our inventory.
 
-The result originally served to the user is compared against the consensus of these sampled nodes. Any node that returns a result that deviates from consensus receives a strike.
-
-After a configurable number of strikes (currently three), the node is disqualified from serving production traffic and placed on cooldown. This process is fully asynchronous and does not impact request latency.
+The result originally served to the user is compared against the consensus of these sampled nodes. Each node is scored on how consistently it agrees with consensus. Nodes that deviate are given lower scores, and a node whose score falls below the routing threshold is removed from production routing until it recovers. This removal is enforced by the routing layer — Sentinel measures and scores so the router knows who to trust.
 
 **Lag Checks**
 
-Correctness is meaningless if data is stale. During replay checks, Sentinel also issues eth_blockNumber calls against a random subset of nodes and measures how far each node lags behind the observed consensus.
+Correctness is meaningless if data is stale. Sentinel also runs lag checks, which issue `eth_blockNumber` calls against a sample of nodes and measure how far each node's reported block lags behind the observed chain tip.
 
-Lag is normalized using the 30-day rolling average block time for each chain, allowing us to reason in terms of time rather than raw block counts.
+Lag is normalized using the average block production time for each chain, allowing us to reason in terms of time rather than raw block counts.
 
-- Nodes slightly behind the tip receive strikes
-- Nodes significantly out of sync are immediately blacklisted, as there is no acceptable reason for severe lag in production RPC traffic
+- Nodes slightly behind the tip receive lower scores
+- Nodes significantly out of sync are removed from production routing, as there is no acceptable reason for severe lag in production RPC traffic
 
 ## **Node Rehabilitation (“Staging Arena”)**
 
@@ -71,10 +69,10 @@ Implementation Details and Edge Cases
 
 Some additional details for completeness:
 
-- If a chain or route has insufficient traffic, Sentinel forces validation rounds at least once per hour
+- Validation frequency adapts to traffic: high-traffic routes are checked more often, while low-traffic routes are checked less frequently
 - If there are not enough nodes to establish meaningful consensus, no penalties are applied
 - If two nodes return errors and one returns a valid result, the erroring nodes are considered out of consensus
-- Transport-level failures (non-200 responses) do not count as strikes, as production routing will simply retry elsewhere
+- Transport-level failures (non-200 responses) do not penalize a node, as production routing will simply retry elsewhere
 
 All of this functionality is built directly into RouteMesh and is enabled by default at no additional cost. Users can be confident that responses are continuously validated against the broader network, not trusted blindly from a single provider.
 
