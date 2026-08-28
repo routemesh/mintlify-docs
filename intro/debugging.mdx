@@ -18,7 +18,7 @@ Every RPC request returns an `X-Batch-Id` response header (UUID). Save it in you
 `X-Batch-Id` is per HTTP request:
 
 - Single JSON-RPC request: one `X-Batch-Id`
-- JSON-RPC batch (array): one `X-Batch-Id` for the whole batch
+- JSON-RPC batch (array): one `X-Batch-Ids` header containing the comma-separated batch IDs for each item in the batch
 
 ### How to capture it
 

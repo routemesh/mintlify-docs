@@ -1,0 +1,62 @@
+---
+title: "WebSocket API"
+---
+
+RouteMesh supports real-time event streams over WebSocket using the standard Ethereum `eth_subscribe` / `eth_unsubscribe` protocol. This lets you receive pushed notifications — like new blocks or contract logs — without polling.
+
+## Connecting
+
+Connect to the WebSocket URL with your API key in the path (same keys you use for HTTP RPC):
+
+```text
+wss://lb.routeme.sh/rpc/{chain_id}/{api_key}
+```
+
+The connection must be upgraded from HTTP. On a successful handshake, the server returns an `X-WebSocket-Session-ID` header you can use for debugging.
+
+The handshake validates your API key, origin, and credit balance before the socket is upgraded. Common handshake failures return an HTTP status before upgrade:
+
+- **402** — Insufficient credits
+- **429** — Service draining or too many concurrent connections from your IP (a `Retry-After` header tells you when to retry)
+- **503** — All connection slots are currently in use
+- **401** — Unauthorized (invalid or inactive API key)
+
+## Subscribing and receiving notifications
+
+To subscribe, send `eth_subscribe` with a subscription type:
+
+```json
+{"jsonrpc":"2.0","method":"eth_subscribe","params":["newHeads"],"id":1}
+```
+
+The server replies with a subscription ID, then streams notifications to you as JSON-RPC `eth_subscription` messages:
+
+```json
+{
+  "jsonrpc": "2.0",
+  "method": "eth_subscription",
+  "params": {
+    "subscription": "0x0f5f...",
+    "result": { ... }
+  }
+}
+```
+
+To stop receiving events for a subscription, send `eth_unsubscribe` with the subscription ID.
+
+## Supported subscription types and pricing
+
+The available subscription types (and their prices) can change as we add chains and providers, so instead of a static list use the live endpoints:
+
+- `GET /pricing/ws` — current WebSocket notification prices per chain and subscription type (price per million notifications)
+- `GET /chains/ws` — the chains currently supported over WebSocket
+
+## Reliability
+
+RouteMesh runs WebSocket streams with the same redundancy we apply to HTTP RPC. You get:
+
+- **Seamless provider failover** — if the node behind your subscription goes down, RouteMesh transparently reconnects to an alternate provider and keeps your subscription alive. No action needed on your side.
+- **Gap backfill and deduplication** — on reconnection we replay any missed notifications, drop duplicate events, and keep the stream in order, so you don't lose data.
+- **Resumable streams** — you can reconnect your own client and pick up where you left off. For `newHeads` and `logs` subscriptions, gaps are reconstructed automatically.
+
+This means you can rely on WebSocket as a durable event source rather than treating it as best-effort push.

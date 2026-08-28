@@ -36,7 +36,19 @@ curl -X POST https://lb.routeme.sh/rpc/{chain_id}/{api_key} \
   -d '{"jsonrpc":"2.0","method":"eth_blockNumber","params":[],"id":1}'
 ```
 
-For **allowed domains**, **cooldowns**, and **batch requests**, see [Request behavior](/intro/request-behavior). For **error handling**, see [RPC error codes](/intro/rpc-error-codes).
+For **allowed domains**, **cooldowns**, and **batch requests**, see [Request behavior](/intro/request-behavior). For **error handling**, see [RPC error codes](/intro/rpc-error-codes). For **real-time event streams**, see [WebSocket API](/intro/websockets).
+
+## **Public RPC (no API key)**
+
+You can call RouteMesh without an API key for a limited free tier using the public path `POST /rpc/evm/{chain_id}`. This is intended for light, anonymous access:
+
+```bash
+curl -X POST https://lb.routeme.sh/rpc/evm/1 \
+  -H "Content-Type: application/json" \
+  -d '{"jsonrpc":"2.0","method":"eth_blockNumber","params":[],"id":1}'
+```
+
+The public route is rate-limited per IP. If you hit the limit or it is temporarily unavailable, the response points you to sign up for a free account for full access. For higher volume, use an API key as shown in [Make your first request](#3-make-your-first-request).
 
 ## **Supported networks**
 

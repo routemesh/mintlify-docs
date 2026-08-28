@@ -35,6 +35,7 @@
             "group": "Integration",
             "pages": [
               "intro/request-behavior",
+              "intro/websockets",
               "intro/debugging",
               "intro/mcp-server",
               "intro/network-support",
