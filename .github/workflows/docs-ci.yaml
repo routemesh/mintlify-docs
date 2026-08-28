@@ -1,0 +1,23 @@
+name: docs-ci
+
+on:
+  pull_request:
+  push:
+    branches: [master, main]
+
+concurrency:
+  group: docs-ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build-and-check-links:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - run: npm ci
+      - run: npx mintlify validate
+      - run: npx mintlify broken-links
