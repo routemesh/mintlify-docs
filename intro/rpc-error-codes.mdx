@@ -12,17 +12,27 @@ For a successful HTTP 200, the response may still contain a JSON-RPC `error` (e.
 | :----- | :------------------- | :---------------------------------------------------------------------- |
 | -32700 | Parse error          | Request body is not valid JSON.                                         |
 | -32600 | Invalid request      | Malformed JSON-RPC (e.g. missing required fields) or an empty batch.  |
-| -32602 | Invalid params       | Invalid `chainId` in the request path, or an `eth_getLogs` block span that exceeds the router limit. |
+| -32601 | Insufficient credits | The API key's credit balance is too low to serve the request (HTTP 402). Top up in the dashboard and retry. |
+| -32602 | Invalid params       | Invalid `chainId` in the request path, an `eth_getLogs` block span that exceeds the router limit, or a response that is too large. |
 | -32603 | Internal error       | Router encountered an internal failure. Contact support if persistent. |
 | -32000 | Server error         | Unspecified server error (fallback when no specific code applies).     |
 | -32001 | Chain not supported  | The given `chainId` has no available nodes or paid plan support.       |
 | -32002 | Method not supported | The JSON-RPC method is not enabled for this chain.                     |
 | -32003 | All nodes on cooldown| Every node that could serve the route is temporarily in cooldown (e.g. after rate limits or errors). Retry after a short delay. |
 | -32005 | Limit exceeded       | An `eth_getLogs` query matched too many logs or produced a response that is too large for the requested block span. See [eth_getLogs limits](/intro/request-behavior#eth_getlogs-limits). |
+| -32007 | No block-param nodes | No provider supports the custom block number parameter used in the request (e.g. an `eth_getLogs` query with a specific block range). |
+| -32008 | No providers available| No providers are currently available to serve the route. |
+| -32009 | All nodes failed     | Every provider failed with a non-rate-limit error (HTTP 424). Retry once; if it persists, contact support. |
+| -32011 | No opcode-capable nodes| No provider supports the requested opcode at the given block (e.g. an `eth_call` at a historical block). |
+| -32012 | Insufficient historical depth| No provider has sufficient historical state depth (or `eth_getLogs` earliest-block support) for the requested block. |
+| -32013 | No single provider satisfies all constraints| No single provider supports the full combination of requested constraints (e.g. block range, depth, method). Try reducing the block range or using a more recent block. |
+| -32029 | Public rate limited  | The public (no-API-key) route's per-IP rate limit was exceeded (HTTP 429). Sign up for a free account for full access. |
+| -32030 | Public capacity exhausted| The public (no-API-key) route's free-tier capacity is temporarily exhausted. Sign up for a free account for full access. |
 
 ## Standard JSON-RPC codes
 
 - **-32700** and **-32600** follow the [JSON-RPC 2.0 spec](https://www.jsonrpc.org/specification#error_object) for parse and invalid request errors.
+- **-32601** is the JSON-RPC 2.0 "Method not found" code, repurposed here to signal an empty credit balance.
 - **-32602** is used for invalid `chainId` (invalid params) and for `eth_getLogs` block-span rejections.
 - **-32603** is used for internal router errors.
 - **-32005** follows [EIP-1474](https://eips.ethereum.org/EIPS/eip-1474#error-codes) (limit exceeded) for `eth_getLogs` query-density failures.

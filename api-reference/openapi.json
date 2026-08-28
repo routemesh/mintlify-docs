@@ -289,6 +289,67 @@
     }
    ]
   },
+  "/rpc/evm/{chainId}": {
+   "post": {
+    "operationId": "postPublicRpc",
+    "tags": [
+     "RPC"
+    ],
+    "summary": "Public JSON-RPC proxy (no API key)",
+    "description": "Send a single JSON-RPC request or a JSON-RPC batch (array) to the public, anonymous free tier. No API key required. Rate-limited per IP. For higher volume, use an API key at /rpc/{chainId}/{apiKey}.",
+    "parameters": [
+     {
+      "name": "chainId",
+      "in": "path",
+      "required": true,
+      "description": "Chain ID (e.g. 1 for Ethereum, 137 for Polygon, 8453 for Base).",
+      "schema": {
+       "type": "string"
+      },
+      "example": "1"
+     }
+    ],
+    "requestBody": {
+     "required": true,
+     "content": {
+      "application/json": {
+       "schema": {
+        "oneOf": [
+         {
+          "$ref": "#/components/schemas/JsonRpcRequest"
+         },
+         {
+          "$ref": "#/components/schemas/JsonRpcBatchRequest"
+         }
+        ]
+       }
+      }
+     }
+    },
+    "responses": {
+     "200": {
+      "description": "JSON-RPC response (single or batch)",
+      "headers": {
+       "X-Batch-Id": {
+        "$ref": "#/components/headers/XBatchId"
+       }
+      }
+     },
+     "400": {
+      "description": "Bad request (e.g. invalid JSON or invalid JSON-RPC payload)"
+     },
+     "429": {
+      "description": "Too many requests (public per-IP rate limit exceeded)"
+     },
+     "503": {
+      "description": "Service temporarily unavailable (public free-tier capacity exhausted or unrelated)"
+     },
+     "500": {
+      "description": "Internal server error"
+     }
+    }
+   }
+  },
   "/api-keys": {
    "get": {
     "operationId": "listMyApiKeys",
@@ -961,7 +1022,7 @@
     "properties": {
      "code": {
       "type": "integer",
-      "description": "Router error codes: -32700 (parse error), -32600 (invalid request), -32602 (invalid params or eth_getLogs block span too large), -32603 (internal error), -32000 (server error), -32001 (chain not supported), -32002 (method not supported), -32003 (all nodes on cooldown), -32005 (eth_getLogs query limit exceeded)."
+      "description": "Router error codes: -32700 (parse error), -32600 (invalid request), -32601 (insufficient credits), -32602 (invalid params), -32603 (internal error), -32000 (server error), -32001 (chain not supported), -32002 (method not supported), -32003 (all nodes on cooldown), -32005 (eth_getLogs query limit exceeded), -32007 (no block-param capable nodes), -32008 (no providers available), -32009 (all nodes failed), -32011 (no opcode-capable nodes), -32012 (insufficient historical state depth), -32013 (no single provider satisfies all constraints), -32029 (public per-IP rate limit exceeded), -32030 (public free-tier capacity exhausted). See the RPC error codes guide for details."
      },
      "message": {
       "type": "string",
