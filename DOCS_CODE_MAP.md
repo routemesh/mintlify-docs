@@ -1,15 +1,15 @@
 # Docs ↔ Codebase map
 
-Use this map to verify that **mintlify-docs** stays in sync with the **routemesh** monorepo. Each doc area lists the code paths that define or implement the behavior the docs describe.
+Use this map to verify that **mintlify-docs** stays in sync with the **routemesh** codebase. Each doc area lists the code paths (by repo and file) that define or implement the behavior the docs describe.
 
-**Monorepo layout (relative to repo root):**
-- `atlas/` — Router (RPC handling, cooldowns, routing, batch ID, error codes)
-- `sentinel/` — Data quality (replay checks, lag checks, staging, disqualification)
-- `front-end/` — Dashboard, provider portal, consumer app, URLs, nav
-- `mintlify-docs/` — This documentation site
+**Repos (each is its own GitHub repository under `routemesh/`):**
+- `routemesh/atlas` — Router (RPC handling, cooldowns, routing, batch ID, error codes)
+- `routemesh/sentinel` — Data quality (replay checks, lag checks, staging, disqualification)
+- `routemesh/front-end` — Dashboard, provider portal, consumer app, URLs, nav
+- `routemesh/mintlify-docs` — This documentation site
 - `api-reference/openapi.json` — API spec (should match atlas + any gateway that sets headers)
-- `routemesh-mcp/` — `@routemesh/mcp` MCP server (Node/TS)
-- `api/` — API server (`api.routeme.sh`: mgmt tokens, usage, API keys, chains)
+
+The `atlas/…`, `front-end/…`, and `sentinel/…` path prefixes below refer to those respective repos' roots.
 
 ---
 
