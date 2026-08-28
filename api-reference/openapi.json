@@ -99,17 +99,17 @@
     }
    ]
   },
-  "/chains": {
+  "/chains/rpc": {
    "get": {
-    "operationId": "getChains",
+    "operationId": "getChainsRpc",
     "tags": [
      "Chains"
     ],
-    "summary": "List supported chains",
-    "description": "Returns chains that have at least one available node and at least one paid provider plan.",
+    "summary": "List supported RPC chains",
+    "description": "Returns the EVM chains supported over HTTP RPC, sorted by chain ID. Public endpoint, no authentication required. Returns an empty array when no chains are supported.",
     "responses": {
      "200": {
-      "description": "Supported chains",
+      "description": "Supported RPC chains",
       "content": {
        "application/json": {
         "schema": {
@@ -117,12 +117,58 @@
          "items": {
           "$ref": "#/components/schemas/ChainInfo"
          }
-        }
+        },
+        "example": [
+         {
+          "chain_id": "1",
+          "name": "Ethereum Mainnet"
+         },
+         {
+          "chain_id": "8453",
+          "name": "Base"
+         }
+        ]
        }
       }
      },
-     "400": {
-      "description": "Bad request"
+     "500": {
+      "description": "Internal server error"
+     }
+    }
+   },
+   "servers": [
+    {
+     "url": "https://api.routeme.sh"
+    }
+   ]
+  },
+  "/chains/ws": {
+   "get": {
+    "operationId": "getChainsWs",
+    "tags": [
+     "Chains"
+    ],
+    "summary": "List supported WebSocket chains",
+    "description": "Returns the EVM chains supported over WebSocket, sorted by chain ID. Public endpoint, no authentication required. Returns an empty array when no chains are supported.",
+    "responses": {
+     "200": {
+      "description": "Supported WebSocket chains",
+      "content": {
+       "application/json": {
+        "schema": {
+         "type": "array",
+         "items": {
+          "$ref": "#/components/schemas/ChainInfo"
+         }
+        },
+        "example": [
+         {
+          "chain_id": "1",
+          "name": "Ethereum Mainnet"
+         }
+        ]
+       }
+      }
      },
      "500": {
       "description": "Internal server error"
