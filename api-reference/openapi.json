@@ -52,6 +52,10 @@
   {
    "name": "Health",
    "description": "Service health checks."
+  },
+  {
+   "name": "Provider",
+   "description": "Provider-scoped management endpoints for managing node plans, methods, and nodes. Authenticated with a management token whose customer is linked to a provider."
   }
  ],
  "paths": {
@@ -877,6 +881,405 @@
      }
     }
    }
+  },
+  "/provider/plans": {
+   "get": {
+    "operationId": "listProviderPlans",
+    "tags": [
+     "Provider"
+    ],
+    "summary": "List my plans",
+    "description": "Returns the authenticated provider's pricing plans, or an empty array when the provider has none. Plan creation and pricing edits remain admin-managed.",
+    "security": [
+     {
+      "MgmtKeyAuth": []
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "List of plans or empty array",
+      "content": {
+       "application/json": {
+        "schema": {
+         "type": "array",
+         "items": {
+          "$ref": "#/components/schemas/ProviderPlan"
+         }
+        }
+       }
+      }
+     },
+     "401": {
+      "description": "Unauthorized"
+     },
+     "403": {
+      "description": "Provider not resolved - token's customer is not linked to a provider"
+     },
+     "500": {
+      "description": "Internal server error"
+     }
+    },
+    "servers": [
+     {
+      "url": "https://api.routeme.sh"
+     }
+    ]
+   }
+  },
+  "/provider/plans/{planId}/methods": {
+   "get": {
+    "operationId": "getProviderPlanMethods",
+    "tags": [
+     "Provider"
+    ],
+    "summary": "List a plan's RPC methods",
+    "description": "Returns the RPC method rows configured for one of the authenticated provider's plans. Returns an empty array when the plan has no methods. Plans not owned by the caller's provider are reported as 404.",
+    "security": [
+     {
+      "MgmtKeyAuth": []
+     }
+    ],
+    "parameters": [
+     {
+      "name": "planId",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "integer"
+      },
+      "description": "Numeric plan ID."
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "List of method rows or empty array",
+      "content": {
+       "application/json": {
+        "schema": {
+         "type": "array",
+         "items": {
+          "$ref": "#/components/schemas/ProviderPlanMethod"
+         }
+        }
+       }
+      }
+     },
+     "400": {
+      "description": "Invalid plan id"
+     },
+     "401": {
+      "description": "Unauthorized"
+     },
+     "403": {
+      "description": "Provider not resolved"
+     },
+     "404": {
+      "description": "Plan not found (or not owned by the caller's provider)"
+     },
+     "500": {
+      "description": "Internal server error"
+     }
+    },
+    "servers": [
+     {
+      "url": "https://api.routeme.sh"
+     }
+    ]
+   },
+   "post": {
+    "operationId": "insertProviderPlanMethods",
+    "tags": [
+     "Provider"
+    ],
+    "summary": "Add methods to a plan",
+    "description": "Appends RPC method rows (1-500) to one of the authenticated provider's plans. The plan must be owned by the caller's provider (otherwise 404).",
+    "security": [
+     {
+      "MgmtKeyAuth": []
+     }
+    ],
+    "parameters": [
+     {
+      "name": "planId",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "integer"
+      },
+      "description": "Numeric plan ID."
+     }
+    ],
+    "requestBody": {
+     "required": true,
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/ProviderPlanMethodsInput"
+       }
+      }
+     }
+    },
+    "responses": {
+     "201": {
+      "description": "Plan methods inserted. Returns a plain-text success message."
+     },
+     "400": {
+      "description": "Invalid plan id, request body, or validation failure"
+     },
+     "401": {
+      "description": "Unauthorized"
+     },
+     "403": {
+      "description": "Provider not resolved"
+     },
+     "404": {
+      "description": "Plan not found (or not owned by the caller's provider)"
+     },
+     "500": {
+      "description": "Internal server error"
+     }
+    },
+    "servers": [
+     {
+      "url": "https://api.routeme.sh"
+     }
+    ]
+   }
+  },
+  "/provider/nodes/{nodeId}/status": {
+   "get": {
+    "operationId": "getProviderNodeStatus",
+    "tags": [
+     "Provider"
+    ],
+    "summary": "Get a node's sync status",
+    "description": "Returns the synchronization status of one of the authenticated provider's nodes. Nodes not owned by the caller's provider are reported as 404.",
+    "security": [
+     {
+      "MgmtKeyAuth": []
+     }
+    ],
+    "parameters": [
+     {
+      "name": "nodeId",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "integer"
+      },
+      "description": "Numeric node ID."
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Node sync status",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/ProviderNodeStatus"
+        }
+       }
+      }
+     },
+     "400": {
+      "description": "Invalid node id"
+     },
+     "401": {
+      "description": "Unauthorized"
+     },
+     "403": {
+      "description": "Provider not resolved"
+     },
+     "404": {
+      "description": "Node not found (or not owned by the caller's provider)"
+     },
+     "500": {
+      "description": "Internal server error"
+     }
+    },
+    "servers": [
+     {
+      "url": "https://api.routeme.sh"
+     }
+    ]
+   }
+  },
+  "/provider/nodes": {
+   "put": {
+    "operationId": "upsertProviderNode",
+    "tags": [
+     "Provider"
+    ],
+    "summary": "Create or update an HTTP node",
+    "description": "Creates or updates an HTTP RPC node for one of the authenticated provider's plans. The URL must be a public http(s) endpoint (loopback, private, and link-local hosts are rejected). The node is screened before persistence; the request fails with 400 when a mandatory screening test does not pass. Returns the upserted node set to a healthy status.",
+    "security": [
+     {
+      "MgmtKeyAuth": []
+     }
+    ],
+    "requestBody": {
+     "required": true,
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/ProviderNodeInput"
+       }
+      }
+     }
+    },
+    "responses": {
+     "200": {
+      "description": "Node upserted",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/ProviderUpsertNodeResponse"
+        }
+       }
+      }
+     },
+     "400": {
+      "description": "Invalid request body, non-public URL, or failed mandatory screening"
+     },
+     "401": {
+      "description": "Unauthorized"
+     },
+     "403": {
+      "description": "Provider not resolved"
+     },
+     "404": {
+      "description": "Plan or node not found (or not owned by the caller's provider)"
+     },
+     "409": {
+      "description": "Node URL already exists in a different plan"
+     },
+     "500": {
+      "description": "Internal server error"
+     }
+    },
+    "servers": [
+     {
+      "url": "https://api.routeme.sh"
+     }
+    ]
+   }
+  },
+  "/provider/nodes/ws": {
+   "put": {
+    "operationId": "upsertProviderWSNode",
+    "tags": [
+     "Provider"
+    ],
+    "summary": "Create or update a WebSocket node",
+    "description": "Creates or updates a WebSocket RPC node for one of the authenticated provider's plans. The URL must be a public wss:// endpoint (loopback, private, and link-local hosts are rejected) that accepts eth_subscribe(\"newHeads\"); the server dials the node to verify before persisting. Returns the upserted node set to a healthy status.",
+    "security": [
+     {
+      "MgmtKeyAuth": []
+     }
+    ],
+    "requestBody": {
+     "required": true,
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/ProviderWSNodeInput"
+       }
+      }
+     }
+    },
+    "responses": {
+     "200": {
+      "description": "WebSocket node upserted",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/ProviderUpsertWSNodeResponse"
+        }
+       }
+      }
+     },
+     "400": {
+      "description": "Invalid request body, non-public URL, or failed newHeads acceptance screening"
+     },
+     "401": {
+      "description": "Unauthorized"
+     },
+     "403": {
+      "description": "Provider not resolved"
+     },
+     "404": {
+      "description": "Plan not found (or not owned by the caller's provider)"
+     },
+     "409": {
+      "description": "URL already registered to another plan"
+     },
+     "500": {
+      "description": "Internal server error"
+     }
+    },
+    "servers": [
+     {
+      "url": "https://api.routeme.sh"
+     }
+    ]
+   }
+  },
+  "/provider/nodes/status": {
+   "post": {
+    "operationId": "setProviderNodeStatus",
+    "tags": [
+     "Provider"
+    ],
+    "summary": "Enable, disable, or delete a node",
+    "description": "Sets the status of one of the authenticated provider's nodes to enable, disable, or delete (hide). Allowed statuses: healthy, disabled by provider, provider-deleted.",
+    "security": [
+     {
+      "MgmtKeyAuth": []
+     }
+    ],
+    "requestBody": {
+     "required": true,
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/ProviderSetNodeStatusInput"
+       }
+      }
+     }
+    },
+    "responses": {
+     "200": {
+      "description": "Node status updated",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/ProviderSetNodeStatusResponse"
+        }
+       }
+      }
+     },
+     "400": {
+      "description": "Invalid request body, node id, or status"
+     },
+     "401": {
+      "description": "Unauthorized"
+     },
+     "403": {
+      "description": "Provider not resolved"
+     },
+     "404": {
+      "description": "Node not found (or not owned by the caller's provider)"
+     },
+     "500": {
+      "description": "Internal server error"
+     }
+    },
+    "servers": [
+     {
+      "url": "https://api.routeme.sh"
+     }
+    ]
+   }
   }
  },
  "components": {
@@ -1669,6 +2072,297 @@
      "id"
     ],
     "additionalProperties": false
+   },
+   "ProviderPlan": {
+    "type": "object",
+    "properties": {
+     "id": {
+      "type": "integer",
+      "description": "Plan ID."
+     },
+     "created_at": {
+      "type": "string",
+      "format": "date-time"
+     },
+     "provider": {
+      "type": "string",
+      "description": "Provider identifier."
+     },
+     "provider_id": {
+      "type": "integer"
+     },
+     "name": {
+      "type": "string"
+     },
+     "price": {
+      "type": "number"
+     },
+     "quota": {
+      "type": "number"
+     },
+     "quota_unit": {
+      "type": "string"
+     },
+     "description": {
+      "type": "string"
+     },
+     "overage_price": {
+      "type": "number"
+     },
+     "overage_limit": {
+      "type": "number"
+     },
+     "rate_limit_req": {
+      "type": "number"
+     },
+     "rate_limit_req_interval_sec": {
+      "type": "number"
+     },
+     "rate_limit_cr": {
+      "type": "number"
+     },
+     "rate_limit_cr_interval_sec": {
+      "type": "number"
+     },
+     "billing_fixed_day": {
+      "type": "integer",
+      "nullable": true
+     },
+     "billing_interval_days": {
+      "type": "integer",
+      "nullable": true
+     },
+     "billing_anchored_start_date": {
+      "type": "string",
+      "format": "date-time",
+      "nullable": true
+     }
+    }
+   },
+   "ProviderPlanMethod": {
+    "type": "object",
+    "properties": {
+     "method": {
+      "type": "string",
+      "description": "RPC method name, e.g. eth_blockNumber."
+     },
+     "vm": {
+      "type": "string",
+      "description": "Virtual machine type, e.g. evm."
+     },
+     "node_target_type": {
+      "type": "string",
+      "description": "Node target type the method routes to."
+     },
+     "cost": {
+      "type": "integer",
+      "description": "Credit cost per call (0 = free)."
+     },
+     "rate_limit": {
+      "type": "integer",
+      "nullable": true,
+      "description": "Optional per-call rate limit."
+     },
+     "rate_limit_interval_sec": {
+      "type": "integer",
+      "nullable": true,
+      "description": "Rate limit window in seconds."
+     },
+     "chain_id": {
+      "type": "string",
+      "nullable": true,
+      "description": "Chain this cost applies to; null/omitted for all chains."
+     }
+    }
+   },
+   "ProviderPlanMethodsInput": {
+    "type": "object",
+    "properties": {
+     "methods": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 500,
+      "items": {
+       "$ref": "#/components/schemas/ProviderPlanMethodInput"
+      }
+     }
+    },
+    "required": [
+     "methods"
+    ]
+   },
+   "ProviderPlanMethodInput": {
+    "type": "object",
+    "properties": {
+     "method": {
+      "type": "string"
+     },
+     "vm": {
+      "type": "string"
+     },
+     "node_target_type": {
+      "type": "string"
+     },
+     "cost": {
+      "type": "integer",
+      "minimum": 0
+     },
+     "rate_limit": {
+      "type": "integer",
+      "minimum": 0
+     },
+     "rate_limit_interval_sec": {
+      "type": "integer",
+      "minimum": 0
+     },
+     "chain_id": {
+      "type": "string",
+      "nullable": true
+     }
+    },
+    "required": [
+     "method",
+     "vm",
+     "node_target_type",
+     "cost"
+    ]
+   },
+   "ProviderNodeStatus": {
+    "type": "object",
+    "properties": {
+     "node_id": {
+      "type": "integer"
+     },
+     "in_sync": {
+      "type": "boolean"
+     },
+     "status": {
+      "type": "string",
+      "description": "ok or out_of_sync"
+     }
+    }
+   },
+   "ProviderNodeInput": {
+    "type": "object",
+    "properties": {
+     "plan_id": {
+      "type": "integer",
+      "description": "Plan ID the node belongs to (must be owned by the provider)."
+     },
+     "url": {
+      "type": "string",
+      "description": "Public http(s) endpoint URL of the node."
+     },
+     "vm": {
+      "type": "string",
+      "description": "Virtual machine type, e.g. evm."
+     },
+     "rate_limit": {
+      "type": "number",
+      "description": "Requests per interval (0 = unlimited)."
+     },
+     "rate_limit_interval_sec": {
+      "type": "integer",
+      "description": "Rate limit window in seconds."
+     },
+     "source": {
+      "type": "string",
+      "enum": [
+       "provider",
+       "website",
+       "erpc",
+       "node_request",
+       "new_chain_request"
+      ],
+      "description": "Node source (default provider)."
+     }
+    },
+    "required": [
+     "plan_id",
+     "url",
+     "vm",
+     "rate_limit",
+     "rate_limit_interval_sec"
+    ]
+   },
+   "ProviderUpsertNodeResponse": {
+    "type": "object",
+    "properties": {
+     "message": {
+      "type": "string"
+     },
+     "node": {
+      "type": "object"
+     },
+     "status": {
+      "type": "string",
+      "description": "healthy on success."
+     }
+    }
+   },
+   "ProviderWSNodeInput": {
+    "type": "object",
+    "properties": {
+     "plan_id": {
+      "type": "integer",
+      "description": "Plan ID the WebSocket node belongs to (must be owned by the provider)."
+     },
+     "chain_id": {
+      "type": "string",
+      "description": "Chain ID the node serves, e.g. 137."
+     },
+     "url": {
+      "type": "string",
+      "description": "Public wss:// endpoint URL; must accept eth_subscribe(\"newHeads\")."
+     }
+    },
+    "required": [
+     "plan_id",
+     "chain_id",
+     "url"
+    ]
+   },
+   "ProviderUpsertWSNodeResponse": {
+    "type": "object",
+    "properties": {
+     "message": {
+      "type": "string"
+     },
+     "node_ws": {
+      "type": "object"
+     },
+     "status": {
+      "type": "string",
+      "description": "healthy on success."
+     }
+    }
+   },
+   "ProviderSetNodeStatusInput": {
+    "type": "object",
+    "properties": {
+     "node_id": {
+      "type": "integer"
+     },
+     "status": {
+      "type": "string",
+      "description": "healthy (enable), disabled by provider (disable), or provider-deleted (delete)."
+     }
+    },
+    "required": [
+     "node_id",
+     "status"
+    ]
+   },
+   "ProviderSetNodeStatusResponse": {
+    "type": "object",
+    "properties": {
+     "node_id": {
+      "type": "integer"
+     },
+     "status": {
+      "type": "string"
+     }
+    }
    }
   },
   "headers": {
