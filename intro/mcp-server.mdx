@@ -52,7 +52,7 @@ Any stdio MCP client uses the same shape: command `npx`, args `-y @routemesh/mcp
 | Variable                    | Required | Default                  | Description                                                                                                          |
 | :-------------------------- | :------- | :----------------------- | :------------------------------------------------------------------------------------------------------------------- |
 | `ROUTEMESH_API_KEY`         | yes      | —                        | Your RouteMesh API key, used in the RPC URL path.                                                                     |
-| `ROUTEMESH_MGMT_TOKEN`      | no       | —                        | Customer management token. When set, the server also exposes the [customer tools](#customer-tools).                   |
+| `ROUTEMESH_MGMT_TOKEN`      | no       | —                        | Customer management token. When set, the server also exposes the [customer tools](#customer-tools) and, for a provider-linked token, the [provider tools](#provider-tools). |
 | `ROUTEMESH_API_SERVER_URL`  | no       | `https://api.routeme.sh` | Base URL for chain discovery and the customer tools.                                                                  |
 | `ROUTEMESH_BASE_URL`        | no       | `https://lb.routeme.sh`  | Primary RPC router.                                                                                                   |
 | `ROUTEMESH_BACKUP_BASE_URL` | no       | `https://lb2.routeme.sh` | Backup RPC router, used on retry.                                                                                     |
@@ -101,6 +101,22 @@ Exposed only when `ROUTEMESH_MGMT_TOKEN` is set.
 - `granularity` — `day` or `hour` for `time_series` (default `day`).
 - `limit` — max rows for `top_methods` and `groupBy` (default 20, max 100).
 
+## **Provider tools**
+
+Exposed when `ROUTEMESH_MGMT_TOKEN` is set and the token's customer is **linked to a provider**. These tools mirror the provider management endpoints in the [API Reference](/api-reference) and authenticate the same way, sending the token in the `X-Api-Key` header. Scoping matches the API endpoints: a token whose customer is not linked to a provider returns 403 (`provider not resolved`), and resources owned by another provider return 404 (existence is not leaked). Call them only with a provider-linked management token.
+
+| Tool                           | Description                                                                                                                                                                  |
+| :----------------------------- | :--------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `provider_list_plans`          | List the provider's pricing plans (`GET /provider/plans`).                                                                                                                    |
+| `provider_get_plan_methods`    | List the RPC methods configured for a plan (`GET /provider/plans/:planId/methods`).                                                                                           |
+| `provider_get_node_status`     | Get a node's sync status — `{ node_id, in_sync, status }` (`GET /provider/nodes/:nodeId/status`).                                                                             |
+| `provider_upsert_plan_methods` | Add 1-500 RPC method rows to a plan (`POST /provider/plans/:planId/methods`).                                                                                                 |
+| `provider_upsert_node`         | Create or update an HTTP node on a plan (`PUT /provider/nodes`). URL must be a public http(s) endpoint; the node is screened before persisting.                               |
+| `provider_upsert_ws_node`      | Create or update a WebSocket node on a plan (`PUT /provider/nodes/ws`). URL must be a public wss:// endpoint that accepts `eth_subscribe("newHeads")`; the server dials to verify. |
+| `provider_set_node_status`     | Enable, disable, or delete a node — `healthy`, `disabled by provider`, or `provider-deleted` (`POST /provider/nodes/status`).                                                 |
+
+Node upserts screen endpoints before persisting: URLs must be public `http(s)` or `wss://` (loopback, private, and link-local hosts are rejected up front). A failed mandatory screening returns 400; a URL owned by another provider returns 404; a URL already registered to a different plan of the same provider returns 409. Endpoint-level behavior and error codes are in the [API Reference](/api-reference).
+
 ## **Management tokens**
 
 Customer tools authenticate with a customer management token. Create one in the dashboard:
@@ -109,7 +125,7 @@ Customer tools authenticate with a customer management token. Create one in the 
 2. Click **New Token** and give it a label (e.g. `mcp-cursor`).
 3. Copy the secret — it is **shown only once**.
 
-Customer management tokens are scoped automatically to your account's management routes (`GET /usage`, `GET /api-keys`, `POST /api-keys`, `PUT /api-keys/:id`) and nothing else. Use a dedicated token for the MCP server so you can revoke it independently if it leaks.
+Customer management tokens are scoped to your account's management routes and, for a provider-linked token, the provider routes — and nothing else. Use a dedicated token for the MCP server so you can revoke it independently if it leaks.
 
 ## **Example prompts**
 
