@@ -110,7 +110,7 @@
      "Chains"
     ],
     "summary": "List supported RPC chains",
-    "description": "Returns the EVM chains supported over HTTP RPC, sorted by chain ID. Public endpoint, no authentication required. Returns an empty array when no chains are supported.",
+    "description": "Returns the EVM chains supported over HTTP RPC, sorted by chain ID. Public endpoint, no authentication required. Returns an empty array when no chains are supported. A chain is listed only while it has healthy nodes available to serve it, so chains can disappear temporarily when node availability drops.",
     "responses": {
      "200": {
       "description": "Supported RPC chains",
@@ -153,7 +153,7 @@
      "Chains"
     ],
     "summary": "List supported WebSocket chains",
-    "description": "Returns the EVM chains supported over WebSocket, sorted by chain ID. Public endpoint, no authentication required. Returns an empty array when no chains are supported.",
+    "description": "Returns the EVM chains supported over WebSocket, sorted by chain ID. Public endpoint, no authentication required. Returns an empty array when no chains are supported. A chain is listed only while it has healthy nodes available to serve it, so chains can disappear temporarily when node availability drops.",
     "responses": {
      "200": {
       "description": "Supported WebSocket chains",
