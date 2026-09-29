@@ -13,7 +13,7 @@ For a successful HTTP 200, the response may still contain a JSON-RPC `error` (e.
 | -32700 | Parse error          | Request body is not valid JSON.                                         |
 | -32600 | Invalid request      | Malformed JSON-RPC (e.g. missing required fields) or an empty batch.  |
 | -32601 | Insufficient credits | The API key's credit balance is too low to serve the request (HTTP 402). Top up in the dashboard and retry. |
-| -32602 | Invalid params       | Invalid `chainId` in the request path, an `eth_getLogs` block span that exceeds the router limit, or a response that is too large. |
+| -32602 | Invalid params       | Invalid `chainId` in the request path, an `eth_getLogs` block span that exceeds the router limit, a response that is too large, or a block reference that can never resolve (rejected before dispatch). |
 | -32603 | Internal error       | Router encountered an internal failure. Contact support if persistent. |
 | -32000 | Server error         | Unspecified server error (fallback when no specific code applies).     |
 | -32001 | Chain not supported  | The given `chainId` has no available nodes or paid plan support.       |
@@ -23,9 +23,11 @@ For a successful HTTP 200, the response may still contain a JSON-RPC `error` (e.
 | -32007 | No block-param nodes | No provider supports the custom block number parameter used in the request (e.g. an `eth_getLogs` query with a specific block range). |
 | -32008 | No providers available| No providers are currently available to serve the route. |
 | -32009 | All nodes failed     | Every provider failed with a non-rate-limit error (HTTP 424). Retry once; if it persists, contact support. |
-| -32011 | No opcode-capable nodes| No provider supports the requested opcode at the given block (e.g. an `eth_call` at a historical block). |
+| -32011 | No opcode-capable nodes| No provider supports the requested opcode at the given block (e.g. an `eth_call` at a historical block), or no provider with verified hypercore state is available for precompile reads. |
 | -32012 | Insufficient historical depth| No provider has sufficient historical state depth (or `eth_getLogs` earliest-block support) for the requested block. |
 | -32013 | No single provider satisfies all constraints| No single provider supports the full combination of requested constraints (e.g. block range, depth, method). Try reducing the block range or using a more recent block. |
+| -32014 | No deep state-read capable nodes | State reads at an explicit historical block may route only to providers that honor historical block tags; no such provider is currently available. Retry at a more recent block. |
+| -32015 | No full transaction index     | By-hash transaction lookups may route only to providers with a complete transaction index; none is currently available. Very old transactions may be unavailable on some routes. |
 | -32029 | Public rate limited  | The public (no-API-key) route's per-IP rate limit was exceeded (HTTP 429). Sign up for a free account for full access. |
 | -32030 | Public capacity exhausted| The public (no-API-key) route's free-tier capacity is temporarily exhausted. Sign up for a free account for full access. |
 
@@ -86,6 +88,8 @@ If no hint is available, the message contains only the base text (no suffix).
 - **-32700 / -32600**: Fix the request payload (valid JSON, non-empty batch, required fields present).
 - **-32602**: Check the URL path for a valid `chainId`. For `eth_getLogs`, reduce `toBlock - fromBlock` or split the query into smaller chunks. Use the hint suffix when present.
 - **-32005**: The block span is acceptable but the filter returned too much data. Narrow `fromBlock`/`toBlock` using the hint, or tighten `address`/`topics`. See [Request behavior: eth_getLogs limits](/intro/request-behavior#eth_getlogs-limits).
+- **-32014**: State reads at an explicit historical block may route only to providers that honor historical block tags. Retry at a more recent block.
+- **-32015**: By-hash transaction lookups route only to providers with a complete transaction index. Very old transactions may be unavailable on some routes.
 - **-32001**: Use a supported chain or contact us to request support for a new chain.
 - **-32002**: The method is not available for this chain; use a different method or chain.
 - **-32003**: Retry after a short backoff; cooldowns are temporary. See [Request behavior: Cooldowns and rate limiting](/intro/request-behavior#cooldowns-and-rate-limiting) for details.
