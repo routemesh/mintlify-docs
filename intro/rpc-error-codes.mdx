@@ -28,6 +28,7 @@ For a successful HTTP 200, the response may still contain a JSON-RPC `error` (e.
 | -32013 | No single provider satisfies all constraints| No single provider supports the full combination of requested constraints (e.g. block range, depth, method). Try reducing the block range or using a more recent block. |
 | -32014 | No deep state-read capable nodes | State reads at an explicit historical block may route only to providers that honor historical block tags; no such provider is currently available. Retry at a more recent block. |
 | -32015 | No full transaction index     | By-hash transaction lookups may route only to providers with a complete transaction index; none is currently available. Very old transactions may be unavailable on some routes. |
+| -32016 | No deep-trace-capable providers | Trace methods (`debug_trace*`, `trace_*`, `arbtrace_*`) route only to providers that retain deep trace history; none is currently available (HTTP 424). Retry later; if it persists, contact support. |
 | -32029 | Public rate limited  | The public (no-API-key) route's per-IP rate limit was exceeded (HTTP 429). Sign up for a free account for full access. |
 | -32030 | Public capacity exhausted| The public (no-API-key) route's free-tier capacity is temporarily exhausted. Sign up for a free account for full access. |
 
@@ -91,6 +92,7 @@ If no hint is available, the message contains only the base text (no suffix).
 - **-32005**: Two cases. If the block span is acceptable but the filter returned too much data, narrow `fromBlock`/`toBlock` using the hint, or tighten `address`/`topics` — see [Request behavior: eth_getLogs limits](/intro/request-behavior#eth_getlogs-limits). If the response is HTTP 429 with `error.data.reason` = `capacity_cooldown`, every node was temporarily in cooldown: retry after a short backoff — see [Request behavior: Cooldowns and rate limiting](/intro/request-behavior#cooldowns-and-rate-limiting).
 - **-32014**: State reads at an explicit historical block may route only to providers that honor historical block tags. Retry at a more recent block.
 - **-32015**: By-hash transaction lookups route only to providers with a complete transaction index. Very old transactions may be unavailable on some routes.
+- **-32016**: No provider currently retains the deep trace history needed for the trace method (`debug_trace*`, `trace_*`, `arbtrace_*`). Retry later; if it persists, contact support.
 - **-32001**: Use a supported chain or contact us to request support for a new chain.
 - **-32002**: The method is not available for this chain; use a different method or chain.
 - **-32603 / -32000**: Retry once; if it persists, contact support.
