@@ -33,8 +33,12 @@ Allowed domains are configured when you create or update an API key in the dashb
 When an upstream node returns a rate-limit (HTTP 429) or service-unavailable (503) response, RouteMesh puts that **pathway** (node + method) on a short **cooldown**. During cooldown, the router will not send new requests to that pathway, so you avoid hammering a node that is already overloaded.
 
 - Cooldowns are **per pathway** (node and method), not global. Other nodes or methods are still used.
-- If **all** pathways that can serve your route are on cooldown, the router returns HTTP **429 Too Many Requests** and a JSON-RPC error with code **-32003 (All nodes on cooldown)**.
-- When you get -32003, **retry after a short backoff** (e.g. a few seconds). Cooldowns are temporary; once they expire, the same request can succeed.
+- If **all** pathways that can serve your route are on cooldown, the router returns HTTP **429 Too Many Requests** and a JSON-RPC error with code **-32005 (Limit exceeded)** and `error.data.reason` = `capacity_cooldown`.
+- When you get this cooldown error, **retry after a short backoff** (e.g. a few seconds). Cooldowns are temporary; once they expire, the same request can succeed.
+
+<Note>
+The cooldown error uses **-32005**, not **-32003**. EIP-1474 assigns -32003 to "Transaction rejected", and some clients (e.g. viem's `fallback` transport) treat that code as terminal — they stop and do not try the next provider. Using -32005 lets standard clients fall back or retry on their own. Distinguish a cooldown (HTTP 429, `error.data.reason` = `capacity_cooldown`) from an `eth_getLogs` query-density error, which also uses -32005 but returns HTTP 400.
+</Note>
 
 Our aggregate capacity is high because we pool many providers. If you consistently hit cooldowns on a chain, reach out so we can help optimize.
 
