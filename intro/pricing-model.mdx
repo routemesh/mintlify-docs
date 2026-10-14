@@ -18,7 +18,7 @@ For customers with larger sustained usage, we can offer committed use discounts 
 
 ## Look up current prices
 
-You can look up current prices programmatically with the public pricing endpoints. No API key is required, and both endpoints are rate-limited per IP (about 30 requests per 60 seconds). See the Pricing section of the API Reference for full details.
+You can look up current prices programmatically with the public pricing endpoints. No API key is required, and both endpoints are rate-limited per IP (about 30 requests per 60 seconds). Optionally, `GET /pricing/rpc` accepts your RPC service key in the `X-Api-Key` header, which returns the prices with your active pricing overrides applied (each row also reports `base_price_per_million` and `price_override_applied`). See the Pricing section of the API Reference for full details.
 
 - `GET /pricing/rpc` returns current RPC route prices (price per million requests) per vm, chain ID, method, and routing strategy. Optional filters: `vm`, `chain_id`, `method`, `routing_strategy`.
 - `GET /pricing/ws` returns current websocket notification prices (price per million notifications) per chain ID and subscription type. Optional filters: `chain_id`, `subscription_type`.
