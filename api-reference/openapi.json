@@ -743,8 +743,17 @@
      "Pricing"
     ],
     "summary": "List RPC route prices",
-    "description": "Public endpoint returning current RPC route prices for each vm, chain ID, method, and routing strategy combination. No authentication required. Rate-limited per IP (default 30 requests per 60 seconds). Empty results return an empty JSON array.",
+    "description": "Public endpoint returning current RPC route prices for each vm, chain ID, method, and routing strategy combination. No authentication required by default; without a key the response is the public catalog price, rate-limited per IP (default 30 requests per 60 seconds). Optionally pass an RPC service key in the X-Api-Key header to receive the caller's effective prices with their active pricing overrides applied (each row then also reports base_price_per_million and price_override_applied); such requests skip the per-IP rate limit. An unknown, inactive, or malformed key returns 401. Empty results return an empty JSON array.",
     "parameters": [
+     {
+      "name": "X-Api-Key",
+      "in": "header",
+      "description": "Optional RPC service key. When provided, the response returns the caller's effective prices with their active pricing overrides applied (each row also reports base_price_per_million and price_override_applied) and skips the per-IP rate limit. Without it the endpoint returns the public catalog price. An unknown, inactive, or malformed key returns 401.",
+      "required": false,
+      "schema": {
+       "type": "string"
+      }
+     },
      {
       "name": "vm",
       "in": "query",
@@ -808,6 +817,9 @@
         ]
        }
       }
+     },
+     "401": {
+      "description": "Unauthorized — an unknown, inactive, or malformed X-Api-Key value was supplied. Keyless requests never reach this state; they are served the public catalog price."
      },
      "429": {
       "description": "Rate limit exceeded (per-IP limit; default 30 requests per 60 seconds)"
@@ -1317,7 +1329,15 @@
      },
      "price_per_million": {
       "type": "number",
-      "description": "Price per one million requests."
+      "description": "Price per one million requests. For keyless requests this is the public catalog price; with an X-Api-Key it is the caller's effective price after any active pricing overrides."
+     },
+     "base_price_per_million": {
+      "type": "number",
+      "description": "Catalog price before any override. Present only on responses requested with an X-Api-Key."
+     },
+     "price_override_applied": {
+      "type": "boolean",
+      "description": "Whether an active pricing override supplied price_per_million. Present only on responses requested with an X-Api-Key."
      }
     },
     "required": [
