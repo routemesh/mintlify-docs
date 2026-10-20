@@ -13,7 +13,7 @@ For a successful HTTP 200, the response may still contain a JSON-RPC `error` (e.
 | -32700 | Parse error          | Request body is not valid JSON.                                         |
 | -32600 | Invalid request      | Malformed JSON-RPC (e.g. missing required fields) or an empty batch.  |
 | -32601 | Insufficient credits | The API key's credit balance is too low to serve the request (HTTP 402). Top up in the dashboard and retry. |
-| -32602 | Invalid params       | Invalid `chainId` in the request path, an `eth_getLogs` block span that exceeds the router limit, a response that is too large, or a block reference that can never resolve (rejected before dispatch). |
+| -32602 | Invalid params       | Invalid `chainId` in the request path, an `eth_getLogs` or `trace_filter` block span that exceeds the largest span the router can currently route, a response that is too large, or a block reference that can never resolve (rejected before dispatch). |
 | -32603 | Internal error       | Router encountered an internal failure. Contact support if persistent. |
 | -32000 | Server error         | Unspecified server error (fallback when no specific code applies).     |
 | -32001 | Chain not supported  | The given `chainId` has no available nodes or paid plan support.       |
@@ -24,11 +24,11 @@ For a successful HTTP 200, the response may still contain a JSON-RPC `error` (e.
 | -32008 | No providers available| No providers are currently available to serve the route. |
 | -32009 | All nodes failed     | Every provider failed with a non-rate-limit error (HTTP 424). Retry once; if it persists, contact support. |
 | -32011 | No opcode-capable nodes| No provider supports the requested opcode at the given block (e.g. an `eth_call` at a historical block), or no provider with verified hypercore state is available for precompile reads. |
-| -32012 | Insufficient historical depth| No provider has sufficient historical state depth (or `eth_getLogs` earliest-block support) for the requested block. |
+| -32012 | Insufficient historical depth| No provider has sufficient historical state depth (or `eth_getLogs` earliest-block support) for the requested block, or no provider can serve an `eth_getProof` for a block this far behind the chain tip. Retry within the hinted window. |
 | -32013 | No single provider satisfies all constraints| No single provider supports the full combination of requested constraints (e.g. block range, depth, method). Try reducing the block range or using a more recent block. |
 | -32014 | No deep state-read capable nodes | State reads at an explicit historical block may route only to providers that honor historical block tags; no such provider is currently available. Retry at a more recent block. |
 | -32015 | No full transaction index     | By-hash transaction lookups may route only to providers with a complete transaction index; none is currently available. Very old transactions may be unavailable on some routes. |
-| -32016 | No deep-trace-capable providers | Trace methods (`debug_trace*`, `trace_*`, `arbtrace_*`) route only to providers that retain deep trace history; none is currently available (HTTP 424). Retry later; if it persists, contact support. |
+| -32016 | No deep-trace-capable providers | Trace methods (`debug_trace*`, `trace_*`, `arbtrace_*`) route only to providers that retain deep trace history, and `trace_filter` routes only to providers that support it; none is currently available (HTTP 424). Retry later; if it persists, contact support. |
 | -32029 | Public rate limited  | The public (no-API-key) route's per-IP rate limit was exceeded (HTTP 429). Sign up for a free account for full access. |
 | -32030 | Public capacity exhausted| The public (no-API-key) route's free-tier capacity is temporarily exhausted. Sign up for a free account for full access. |
 
@@ -41,20 +41,24 @@ For a successful HTTP 200, the response may still contain a JSON-RPC `error` (e.
 - **-32005** follows [EIP-1474](https://eips.ethereum.org/EIPS/eip-1474#error-codes) (limit exceeded) for both `eth_getLogs` query-density failures (HTTP 400) and router capacity cooldowns (HTTP 429).
 - **-32xxx** in the -32000 range are router-specific and documented above.
 
-## eth_getLogs error messages
+## Error messages and hints
 
-RouteMesh normalizes upstream `eth_getLogs` limit errors into two client-facing shapes. Hints appear in `error.message` (not a separate field):
+RouteMesh normalizes upstream `eth_getLogs` limit errors into two client-facing shapes. `trace_filter` block-span rejections and the `eth_getProof` proof window reuse the same code shapes with method-specific hints. Hints appear in `error.message` (not a separate field):
 
 | Code   | Base message              | When it occurs |
 | :----- | :------------------------ | :------------- |
-| -32602 | `block range too large`   | The requested `fromBlock`/`toBlock` span exceeds the router maximum (10,000 blocks), or upstream rejected the span as too wide. |
+| -32602 | `block range too large`   | For `eth_getLogs`: the requested `fromBlock`/`toBlock` span exceeds the router maximum (10,000 blocks), or upstream rejected the span as too wide. For `trace_filter`: the requested span exceeds what any available provider can serve (HTTP 400). |
 | -32005 | `query exceeds max results` | The block span is within limits, but the filter is too dense (too many matching logs or a payload that is too large). Narrow the range or add filter constraints (e.g. `address`, `topics`). |
 
-When the router can suggest a smaller span, the message includes a hint suffix:
+When the router can suggest a smaller or more recent request, the message includes a hint suffix. The shape depends on the method:
 
 ```text
-; try a block range of at most N blocks
+; try a block range of at most N blocks                  (eth_getLogs)
+; try a trace_filter block range of at most N blocks     (trace_filter)
+; try a block within N blocks of the chain tip           (eth_getProof)
 ```
+
+In every case `N` is the limit RouteMesh can currently route for that chain and access tier — not a fixed cap. It can change over time as providers and their limits change.
 
 Example (`-32602`, block span too large):
 
@@ -87,12 +91,13 @@ If no hint is available, the message contains only the base text (no suffix).
 ## What to do when you see an error
 
 - **-32700 / -32600**: Fix the request payload (valid JSON, non-empty batch, required fields present).
-- **-32602**: Check the URL path for a valid `chainId`. For `eth_getLogs`, reduce `toBlock - fromBlock` or split the query into smaller chunks. Use the hint suffix when present.
+- **-32602**: Check the URL path for a valid `chainId`. For `eth_getLogs` and `trace_filter`, reduce the requested block span or split the query into smaller chunks. Use the hint suffix when present.
 - **-32003**: This code is not returned by the router (it is reserved by EIP-1474 for "Transaction rejected" and may be passed through from an upstream node). If you see it from a provider, treat it as a rejected transaction, not a cooldown.
 - **-32005**: Two cases. If the block span is acceptable but the filter returned too much data, narrow `fromBlock`/`toBlock` using the hint, or tighten `address`/`topics` — see [Request behavior: eth_getLogs limits](/intro/request-behavior#eth_getlogs-limits). If the response is HTTP 429 with `error.data.reason` = `capacity_cooldown`, every node was temporarily in cooldown: retry after a short backoff — see [Request behavior: Cooldowns and rate limiting](/intro/request-behavior#cooldowns-and-rate-limiting).
+- **-32012**: No provider has sufficient historical depth for the requested block. For `eth_getProof`, retry with a block within the hinted window of the chain tip (`; try a block within N blocks of the chain tip`).
 - **-32014**: State reads at an explicit historical block may route only to providers that honor historical block tags. Retry at a more recent block.
 - **-32015**: By-hash transaction lookups route only to providers with a complete transaction index. Very old transactions may be unavailable on some routes.
-- **-32016**: No provider currently retains the deep trace history needed for the trace method (`debug_trace*`, `trace_*`, `arbtrace_*`). Retry later; if it persists, contact support.
+- **-32016**: No provider currently retains the deep trace history needed for the trace method (`debug_trace*`, `trace_*`, `arbtrace_*`), or supports `trace_filter`. Retry later; if it persists, contact support.
 - **-32001**: Use a supported chain or contact us to request support for a new chain.
 - **-32002**: The method is not available for this chain; use a different method or chain.
 - **-32603 / -32000**: Retry once; if it persists, contact support.
