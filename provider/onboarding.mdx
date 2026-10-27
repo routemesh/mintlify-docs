@@ -1,43 +1,53 @@
 ---
 title: "Onboarding"
-description: "How to join RouteMesh as a node provider — create your account and get connected."
+description: "How to join RouteMesh as a node provider — what we need from you, and how to go live."
 ---
 
-## How to join as a provider
+## What we need from you
 
-Becoming a RouteMesh provider is straightforward. You don't need any special software or SDK — just your RPC endpoints and pricing.
+Becoming a RouteMesh provider doesn't require any special software or SDK. We route consumer traffic to your RPC endpoints based on pricing, latency, and strategy — you just give us your endpoints and tell us what they support. Have the following ready before going live:
+
+### Checklist
+
+- **A RouteMesh account** — [routeme.sh/app](https://routeme.sh/app). If you already have a consumer account, we'll enable it as a provider. No dev work on your side.
+- **Public RPC endpoint URL(s)** — the https endpoint(s) we send traffic to, per chain and region. Endpoints must be publicly reachable (loopback, private, and link-local hosts are rejected). If your endpoint takes an API key, put it in the URL — we route by full URL and don't support custom auth headers.
+- **Chains you serve** — which chains (with chain IDs) your endpoints cover, and whether they're EVM.
+- **Methods you support per chain** — the RPC methods each chain can handle (e.g. `eth_call`, `eth_getLogs`), including trace/debug if you offer them, and whether you serve archive data.
+- **Node regions** — where your nodes are hosted (city/datacenter or cloud region). Latency from our gateways to your nodes drives how much traffic you win.
+- **Pricing** — pay-as-you-go, priced per million requests (we can also price by method or compute unit). You can set different prices for economy vs performance routing, and per chain/method.
+- **Capacity / rate limits** — how much throughput your endpoints handle (e.g. RPS). The rate-limit field in the portal is currently informational — use it to tell us your capacity, and set it to 0 if your nodes are effectively unlimited.
+- **WebSocket endpoints (optional)** — if you serve `wss://` in addition to HTTP, include the websocket URL and its pricing.
+
+We enable your account, then you add your **Nodes**, declare your **Methods**, and set your **Plans** in the provider portal. All three must line up for a route to be active.
+
+## Step by step
 
 ### 1. Create your account
 
-Start by creating a provider account at [**routeme.sh/app**](https://routeme.sh/app).
+Start by creating an account at [**routeme.sh/app**](https://routeme.sh/app), or send us your org ID if you already have one.
 
 ### 2. Reach out
 
-Email us at [**k@routeme.sh**](mailto:k@routeme.sh) to let us know you'd like to join as a provider. You can also reach us on [**Twitter / X**](https://twitter.com/routemesh) or [**LinkedIn**](https://linkedin.com/company/routemesh).
-
-We'll walk you through the next steps and get you connected.
+Email us at [**k@routeme.sh**](mailto:k@routeme.sh) — or reach us on [**Twitter / X**](https://twitter.com/routemesh) or [**LinkedIn**](https://linkedin.com/company/routemesh) — with the items in the checklist above. We'll flip your account to provider status and walk you through the rest.
 
 ### 3. Add your nodes and methods
 
-Once you're in the **Provider portal**, you'll configure three things:
+In the **Provider portal**, register your RPC endpoint URLs (chain and region) and declare which methods you support per chain:
 
-- **Nodes** — Register your RPC endpoint URLs with the chain and region they serve
-- **Methods** — Declare which RPC methods (e.g. `eth_call`, `eth_getLogs`) you support per chain
-- **Plans** — Set your pricing per chain, method, and region. You can enter any price you want — we don't force anything. It's up to you how competitive you want to be.
+- [Nodes](/provider/nodes) — your RPC endpoint URLs
+- [Methods](/provider/methods) — the RPC methods you handle per chain
 
-All three must align for your routes to become active and receive traffic.
+### 4. Set your plans
 
-See the following pages for details:
+Set your pricing per chain, method, and region. You can enter any price you want — how competitive you want to be is up to you. See [Plans](/provider/plans).
 
-- [Plans](/provider/plans) — Pricing configuration
-- [Methods](/provider/methods) — RPC method support
-- [Nodes](/provider/nodes) — RPC endpoint management
+### 5. Go live
 
-### 4. Go live
+Once your nodes, methods, and plans are configured, your routes become eligible for consumer traffic immediately. There's no per-route approval step — the router selects you based on pricing and availability. You'll start seeing requests, market share, and revenue in the [Provider Dashboard](/provider/dashboard) right away.
 
-Once your nodes, methods, and plans are configured, your routes become eligible for consumer traffic immediately. There's no manual approval step for individual routes — the router selects you based on your pricing and availability.
+## Getting paid
 
-You'll start seeing requests and revenue in the [Provider Dashboard](/provider/dashboard) right away, including your market share and how you stack against other providers.
+You earn revenue every time a consumer request is routed to one of your nodes. We settle on a billing cycle: you issue an invoice and we pay by USDC or card.
 
 ---
 
