@@ -11,7 +11,7 @@ concurrency:
 
 jobs:
   build-and-check-links:
-    runs-on: ubuntu-latest
+    runs-on: ww-gpu
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
