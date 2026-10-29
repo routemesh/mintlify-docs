@@ -8,7 +8,7 @@ This page explains how RouteMesh handles your RPC requests: **allowed domains** 
 
 RouteMesh enforces a maximum block span of **10,000 blocks** per `eth_getLogs` request when both `fromBlock` and `toBlock` are fixed hex values. Dynamic tags (`latest`, `safe`, `finalized`, `pending`) are not pre-validated against this limit.
 
-When a request exceeds a limit, the router returns a normalized JSON-RPC error with an actionable hint in `error.message`. See [RPC Error Codes](/intro/rpc-error-codes#eth_getlogs-error-messages) for the full code table.
+When a request exceeds a limit, the router returns a normalized JSON-RPC error with an actionable hint in `error.message`. See [RPC Error Codes](/intro/rpc-error-codes#error-messages-and-hints) for the full code table.
 
 | Situation | Code | What to do |
 | :-------- | :--- | :--------- |
@@ -16,6 +16,8 @@ When a request exceeds a limit, the router returns a normalized JSON-RPC error w
 | Span is within limits but too many logs match | **-32005** (`query exceeds max results`) | Narrow the block range using the hint, or tighten filters (`address`, `topics`). Common for unfiltered or high-volume contracts. |
 
 **Retry pattern:** On `-32005`, halve the block span and retry until the query succeeds, then widen gradually if needed. On `-32602`, stay at or below the hinted maximum span.
+
+**The hint's `N` is your current limit, not always the 10,000 cap.** The `; try a block range of at most N blocks` suffix reports the largest span RouteMesh can currently route for that chain and access tier. This can be smaller than 10,000 and changes over time — different chains and access tiers can have different limits, and the value moves as providers and their limits change. When you see the hint, use its `N` as the maximum for that chain.
 
 ## Allowed domains
 
@@ -31,8 +33,12 @@ Allowed domains are configured when you create or update an API key in the dashb
 When an upstream node returns a rate-limit (HTTP 429) or service-unavailable (503) response, RouteMesh puts that **pathway** (node + method) on a short **cooldown**. During cooldown, the router will not send new requests to that pathway, so you avoid hammering a node that is already overloaded.
 
 - Cooldowns are **per pathway** (node and method), not global. Other nodes or methods are still used.
-- If **all** pathways that can serve your route are on cooldown, the router returns HTTP **429 Too Many Requests** and a JSON-RPC error with code **-32003 (All nodes on cooldown)**.
-- When you get -32003, **retry after a short backoff** (e.g. a few seconds). Cooldowns are temporary; once they expire, the same request can succeed.
+- If **all** pathways that can serve your route are on cooldown, the router returns HTTP **429 Too Many Requests** and a JSON-RPC error with code **-32005 (Limit exceeded)** and `error.data.reason` = `capacity_cooldown`.
+- When you get this cooldown error, **retry after a short backoff** (e.g. a few seconds). Cooldowns are temporary; once they expire, the same request can succeed.
+
+<Note>
+The cooldown error uses **-32005**, not **-32003**. EIP-1474 assigns -32003 to "Transaction rejected", and some clients (e.g. viem's `fallback` transport) treat that code as terminal — they stop and do not try the next provider. Using -32005 lets standard clients fall back or retry on their own. Distinguish a cooldown (HTTP 429, `error.data.reason` = `capacity_cooldown`) from an `eth_getLogs` query-density error, which also uses -32005 but returns HTTP 400.
+</Note>
 
 Our aggregate capacity is high because we pool many providers. If you consistently hit cooldowns on a chain, reach out so we can help optimize.
 
