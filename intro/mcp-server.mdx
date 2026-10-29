@@ -2,7 +2,7 @@
 title: "MCP Server"
 ---
 
-`@routemesh/mcp` is a local MCP server that lets AI coding agents query blockchain data through RouteMesh. Configure it once and your agent gets cross-chain RPC tools — blocks, transactions, logs, balances, fees — plus optional tools to view usage and manage your API keys.
+`@routemesh/mcp` is a local MCP server that lets AI coding agents query blockchain data through RouteMesh. Configure it once and your agent gets cross-chain RPC tools — blocks, transactions, logs, balances, fees — live service pricing, plus optional tools to view your RouteMesh account balance, inspect usage, and manage your API keys.
 
 - Query 1000+ EVM chains from one server — no per-chain endpoint config.
 - Read-only on-chain tools, plus a generic `rpc_call` escape hatch for any JSON-RPC method.
@@ -17,13 +17,13 @@ The server runs locally as a stdio process spawned by your MCP client (Cursor, C
 - **Customer tools** (usage and API keys) call `https://api.routeme.sh` with a customer management token in the `X-Api-Key` header. They are only exposed when the `ROUTEMESH_MGMT_TOKEN` env var is set.
 - On retryable failures (HTTP 429 or 5xx, timeouts, network errors), the server retries with exponential backoff, alternating between the primary and backup load balancers.
 
-All on-chain tools are read-only. The customer tools can create and update API keys, so use a dedicated management token for them.
+The dedicated on-chain query tools read blockchain data; `rpc_call` forwards the method you supply. The customer tools can create and update API keys, so use a dedicated management token for them.
 
 ## **Prerequisites**
 
 - Node.js 20 or later
 - A RouteMesh API key — see [Quick Start](/intro/quick-start)
-- A customer management token — optional, only needed for the customer tools
+- A customer management token — optional, only needed for account balance, usage, and key management
 
 ## **Setup**
 
@@ -63,6 +63,22 @@ The defaults work for all RouteMesh customers — in most setups you only need `
 
 ## **Tools**
 
+### **Pricing tools**
+<Info>
+  The pricing MCP tools are included in the source for version 1.2.0; npm publication is pending. Until that release is available, use the public HTTP pricing endpoints below or build the MCP server from [source](https://github.com/routemesh/routemesh-mcp). Account balance, usage, and provider tools are already available in published releases.
+</Info>
+
+
+
+These tools use public pricing endpoints and do not need a management token. The MCP process still needs the RPC API key in the setup above. Prices are in USD for the RouteMesh service, separate from blockchain gas fees.
+
+| Tool | Parameters | Price unit |
+| :--- | :--- | :--- |
+| `rpc_get_pricing` | Required numeric `chainId`; optional `method` and `routingStrategy` (`economy` or `performance`). Omit strategy to compare both. | Per million requests |
+| `rpc_get_ws_pricing` | Required numeric `chainId`; optional `subscriptionType` such as `newHeads` or `logs`. | Per million notifications |
+
+Results contain `currency`, `unit`, and `items`. An empty list means no matching published price; it does not mean free service. These are current published prices, not account-specific discount quotes. HTTP 429 and 503 are returned as tool errors. See [AI agents and automation](/intro/agents) for direct HTTP examples.
+
 ### **RPC tools**
 
 Always available. `chainId` is the numeric EVM chain ID (e.g. `1` for Ethereum mainnet, `8453` for Base). Use `rpc_list_chains` to discover chains by name or ID.
@@ -90,7 +106,7 @@ Exposed only when `ROUTEMESH_MGMT_TOKEN` is set.
 | `get_usage`        | Usage summary, balance, and breakdowns from the API server. See the [usage parameters](#get_usage-parameters) below.                                       |
 | `list_api_keys`    | Metadata for all your API keys: id, name, active, allowed domains, routing strategy, timestamps. The secret key value is **never** returned.             |
 | `create_api_key`   | Create a key with `allowed_domains` (required), `routing_strategy` (`performance` or `economy`, required), and an optional `name`. **The secret key is shown once in the response** — store it immediately; it cannot be retrieved again. |
-| `update_api_key`   | Partial update of an existing key, addressed by its secret key string: `name`, `active`, and/or `allowed_domains`.                                         |
+| `update_api_key`   | Partial update of an existing key, addressed by its numeric `id` from `list_api_keys`: `name`, `active`, and/or `allowed_domains`.                                         |
 
 #### **`get_usage` parameters**
 
@@ -127,8 +143,12 @@ Customer tools authenticate with a customer management token. Create one in the 
 
 Customer management tokens are scoped to your account's management routes and, for a provider-linked token, the provider routes — and nothing else. Use a dedicated token for the MCP server so you can revoke it independently if it leaks.
 
+Add `"ROUTEMESH_MGMT_TOKEN": "your_customer_management_token"` alongside `ROUTEMESH_API_KEY` in the MCP client environment, then restart the MCP server to expose customer tools.
+
 ## **Example prompts**
 
+- "Compare economy and performance eth_call prices on Base."
+- "What is the price per million newHeads notifications on Ethereum?"
 - "List chains that match `base` and show me their chain IDs."
 - "Get the latest block on BSC and summarize the timestamp and transaction count."
 - "Fetch the receipt for tx `0x...` on Ethereum and tell me if it succeeded."

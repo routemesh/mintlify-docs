@@ -1,0 +1,90 @@
+---
+title: "AI agents and automation"
+description: "Discover chains, compare live RPC prices, inspect account balance and usage, and manage RouteMesh API keys with MCP or HTTP."
+---
+
+RouteMesh gives agents one integration for blockchain RPC across providers, published service prices, and account management. Use the [MCP server](/intro/mcp-server) inside a compatible assistant, or call the HTTP APIs from your own agent. Economy routing prioritizes cost; performance routing prioritizes latency. Both include retries and failover across available providers.
+
+
+<Info>
+  The pricing MCP tools are included in the source for version 1.2.0; npm publication is pending. Until that release is available, use the public HTTP pricing endpoints below or build the MCP server from [source](https://github.com/routemesh/routemesh-mcp). Account balance, usage, and provider tools are already available in published releases.
+</Info>
+
+## Choose your interface
+
+| Task | MCP tool | HTTP endpoint | Authentication |
+| :--- | :--- | :--- | :--- |
+| Discover supported chains | `rpc_list_chains` | `GET https://api.routeme.sh/chains` | Public |
+| Compare RPC service prices | `rpc_get_pricing` | `GET https://api.routeme.sh/pricing/rpc` | Public |
+| Check WebSocket service prices | `rpc_get_ws_pricing` | `GET https://api.routeme.sh/pricing/ws` | Public |
+| Check account balance and usage | `get_usage` | `GET https://api.routeme.sh/usage` | Customer management token |
+| List your RPC key metadata | `list_api_keys` | `GET https://api.routeme.sh/api-keys` | Customer management token |
+| Create an RPC key | `create_api_key` | `POST https://api.routeme.sh/api-keys` | Customer management token |
+| Update or deactivate an RPC key | `update_api_key` | `PUT https://api.routeme.sh/api-keys/{id}` | Customer management token |
+| Read blocks, logs, contracts, or wallet balances | `rpc_get_block`, `rpc_get_logs`, `rpc_call_contract`, `rpc_get_balance` | `POST https://lb.routeme.sh/rpc/{chain_id}/{api_key}` | RPC API key |
+
+Public HTTP endpoints do not need credentials. The local MCP server requires `ROUTEMESH_API_KEY` at startup; add `ROUTEMESH_MGMT_TOKEN` to enable its customer tools. See [MCP setup](/intro/mcp-server#setup) for client configuration.
+
+## Compare prices before choosing a route
+
+Discover the chain ID using `rpc_list_chains`, then ask:
+
+> Compare economy and performance prices for eth_call on Base.
+
+Call `rpc_get_pricing` with `chainId: 8453` and `method: "eth_call"`. Omit `routingStrategy` to return both strategies. The equivalent public request is:
+
+```bash
+curl --get 'https://api.routeme.sh/pricing/rpc' \
+  --data-urlencode 'vm=evm' \
+  --data-urlencode 'chain_id=8453' \
+  --data-urlencode 'method=eth_call'
+```
+
+Each result identifies `vm`, `chain_id`, `method`, `routing_strategy`, and `price_per_million`. RPC prices are **USD per million requests**, separate from blockchain gas fees. For a workload of N requests at a published price P, the service cost estimate is `N / 1,000,000 * P`. Sum across methods and chains for mixed workloads; account discounts and future price changes can affect the final bill.
+
+For WebSocket subscriptions, use `rpc_get_ws_pricing` with a numeric `chainId` and optional `subscriptionType`, or:
+
+```bash
+curl --get 'https://api.routeme.sh/pricing/ws' \
+  --data-urlencode 'chain_id=1' \
+  --data-urlencode 'subscription_type=newHeads'
+```
+
+WebSocket prices are **USD per million notifications**, not per request. An empty pricing array means no matching price is published; it does not mean a zero price or guaranteed support. Public pricing endpoints are rate-limited and can return HTTP 429; retry later. HTTP 503 means pricing data is temporarily unavailable.
+
+## Inspect account balance and spending
+
+Create a customer management token in [Mgmt Tokens](https://routeme.sh/app/consumer/mgmt-tokens). It authenticates account operations through the `X-Api-Key` header. Your RPC API key is a separate credential used for blockchain requests.
+
+With `ROUTEMESH_MGMT_TOKEN` configured, ask your assistant:
+
+> Show my RouteMesh account balance, request count, and usage by chain for the last seven days.
+
+Call `get_usage` with `include: ["summary", "balance", "by_chain"]` and an RFC3339 `from`/`to` window. To call the API directly, set `ROUTEMESH_MGMT_TOKEN` in your environment and run:
+
+```bash
+curl --get 'https://api.routeme.sh/usage' \
+  -H "X-Api-Key: $ROUTEMESH_MGMT_TOKEN" \
+  --data-urlencode 'include=summary,balance,by_chain'
+```
+
+Without a time window, usage defaults to the last 30 days. You can also request breakdowns by API key, method, day, or hour. See [MCP usage parameters](/intro/mcp-server#get_usage-parameters) and the [usage API](/api-reference/usage/get-usage-data) for filters and limits.
+
+Your **RouteMesh account balance** pays for RPC service. A **wallet balance** from `rpc_get_balance` is the native token balance of an on-chain address. They are different values.
+
+## Manage keys from your agent
+
+Use `list_api_keys` to get key IDs, names, active status, allowed domains, and routing strategy. Listing does not reveal the key secrets.
+
+To create a key, call `create_api_key` with `allowed_domains`, `routing_strategy` (`economy` or `performance`), and an optional `name`. The response includes a secret **once**, at creation. Store it securely.
+
+To change a key, pass its numeric `id` from the list response to `update_api_key`, along with `name`, `allowed_domains`, or `active`. For example, `{ "id": 42, "active": false }` deactivates key 42. The HTTP equivalent is `PUT /api-keys/42`. Do not put the secret key string in this management URL.
+
+## Integration references
+
+- [MCP server setup and tool reference](/intro/mcp-server)
+- [OpenAPI specification](https://routeme.sh/docs/api-reference/openapi.json)
+- [RouteMesh MCP source](https://github.com/routemesh/routemesh-mcp)
+- [Supported chains](https://routeme.sh/chains)
+- [Published pricing](https://routeme.sh/pricing)
+- [Routing strategies](/intro/routing-strategies)

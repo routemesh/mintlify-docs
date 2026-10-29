@@ -18,6 +18,7 @@
             "pages": [
               "intro/getting-started",
               "intro/quick-start",
+              "intro/agents",
               "intro/how-it-works",
               "intro/pricing-model",
               "intro/updates"
