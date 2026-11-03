@@ -47,7 +47,7 @@ RouteMesh normalizes upstream `eth_getLogs` limit errors into two client-facing 
 
 | Code   | Base message              | When it occurs |
 | :----- | :------------------------ | :------------- |
-| -32602 | `block range too large`   | For `eth_getLogs`: the requested `fromBlock`/`toBlock` span exceeds the router maximum (10,000 blocks), or upstream rejected the span as too wide. For `trace_filter`: the requested span exceeds what any available provider can serve (HTTP 400). |
+| -32602 | `block range too large`   | For `eth_getLogs`: the requested `fromBlock`/`toBlock` span exceeds the router maximum of 10,000 blocks, counted inclusively, so `toBlock - fromBlock` must be at most 9,999; alternatively, upstream rejected the span as too wide. For `trace_filter`: the requested span exceeds what any available provider can serve (HTTP 400). |
 | -32005 | `query exceeds max results` | The block span is within limits, but the filter is too dense (too many matching logs or a payload that is too large). Narrow the range or add filter constraints (e.g. `address`, `topics`). |
 
 When the router can suggest a smaller or more recent request, the message includes a hint suffix. The shape depends on the method:
@@ -91,7 +91,7 @@ If no hint is available, the message contains only the base text (no suffix).
 ## What to do when you see an error
 
 - **-32700 / -32600**: Fix the request payload (valid JSON, non-empty batch, required fields present).
-- **-32602**: Check the URL path for a valid `chainId`. For `eth_getLogs` and `trace_filter`, reduce the requested block span or split the query into smaller chunks. Use the hint suffix when present.
+- **-32602**: Check the URL path for a valid `chainId`. For `eth_getLogs`, `toBlock - fromBlock` must be at most 9,999 under the 10,000-block cap; reduce the difference or split the query into smaller chunks. The hint's `N` is an inclusive block count, so the largest difference that fits is `N - 1`. For `trace_filter`, reduce the requested block span or split the query into smaller chunks. Use the hint suffix when present.
 - **-32003**: This code is not returned by the router (it is reserved by EIP-1474 for "Transaction rejected" and may be passed through from an upstream node). If you see it from a provider, treat it as a rejected transaction, not a cooldown.
 - **-32005**: Two cases. If the block span is acceptable but the filter returned too much data, narrow `fromBlock`/`toBlock` using the hint, or tighten `address`/`topics` — see [Request behavior: eth_getLogs limits](/intro/request-behavior#eth_getlogs-limits). If the response is HTTP 429 with `error.data.reason` = `capacity_cooldown`, every node was temporarily in cooldown: retry after a short backoff — see [Request behavior: Cooldowns and rate limiting](/intro/request-behavior#cooldowns-and-rate-limiting).
 - **-32012**: No provider has sufficient historical depth for the requested block. For `eth_getProof`, retry with a block within the hinted window of the chain tip (`; try a block within N blocks of the chain tip`).
