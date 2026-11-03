@@ -28,6 +28,7 @@
             "group": "Concepts",
             "pages": [
               "intro/routing-strategies",
+              "intro/capacity-and-rate-limits",
               "intro/data-quality",
               "intro/redundancy"
             ]

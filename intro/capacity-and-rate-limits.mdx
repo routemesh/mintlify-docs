@@ -1,0 +1,38 @@
+---
+title: "Capacity and rate limits"
+description: "How much throughput RouteMesh can serve per chain class, and what happens when your traffic bursts above the pooled capacity."
+---
+
+## Is there a requests-per-second cap?
+
+No. There is no hard requests-per-second (RPS) cap on paid routes: RouteMesh does not apply a fixed per-key throughput ceiling, and a request is not refused because you sent too many in one second.
+
+The only rate limit RouteMesh applies is on the **public, no-API-key route** (`/rpc/evm/{chainId}`). Requests there are limited per IP and per cluster, and return HTTP **429** with **-32029** (`public rate limited`) or **-32030** (`public capacity exhausted`). Requests sent with an API key are not subject to that limiter.
+
+What a paid route can carry depends on two things:
+
+- **The chain** you are calling.
+- **The aggregate capacity of the providers pooled on that chain.**
+
+## Typical throughput per chain class
+
+| Chain class | Examples | Typical sustained throughput |
+| :---------- | :------- | :--------------------------- |
+| Major chains | Ethereum, Base, Arbitrum, Polygon, BSC | thousands of requests per second |
+| Long-tail chains | smaller or newer networks with fewer pooled providers | tens to hundreds of requests per second |
+
+These are observed ranges for the provider capacity currently pooled on those chains, not a contractual guarantee. Capacity moves as providers are added, removed, or scaled, and a chain can be served by one provider today and several next month. [Network support](/intro/network-support) explains how chain coverage is sourced.
+
+## What happens during a burst
+
+When demand on a route exceeds the pooled capacity of its cheapest pathways, RouteMesh keeps the route up by serving requests through higher-cost pathways. The request is served rather than refused, and RouteMesh absorbs the extra upstream cost, so you pay the route's published per-request price. A burst is therefore served at the price of that route rather than rejected.
+
+If every pathway that can serve a route is temporarily unavailable — for example when upstream nodes answer 429 or 503 — the router returns HTTP **429** with **-32005** and `error.data.reason` = `capacity_cooldown`. That is a cooldown, not a cap: retry after a short backoff. See [Request behavior: Cooldowns and rate limiting](/intro/request-behavior#cooldowns-and-rate-limiting) for the mechanics.
+
+## Planning for your peak
+
+Tell us which chains you will run and the peak requests per second you expect on each, and we will check the pooled capacity for those routes before you commit traffic to them. If you need a firm throughput commitment rather than guidance, say so when you send those numbers so it can be agreed explicitly.
+
+<Note>
+The ranges on this page describe what the pooled provider capacity can serve. They are not a per-key quota, and they do not reserve capacity for your account.
+</Note>
