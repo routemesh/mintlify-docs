@@ -36,6 +36,7 @@
             "group": "Integration",
             "pages": [
               "intro/request-behavior",
+              "intro/capacity-and-rate-limits",
               "intro/websockets",
               "intro/debugging",
               "intro/mcp-server",

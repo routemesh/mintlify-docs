@@ -8,6 +8,14 @@ This page explains how RouteMesh handles your RPC requests: **allowed domains** 
 
 RouteMesh enforces a maximum block span of **10,000 blocks** per `eth_getLogs` request when both `fromBlock` and `toBlock` are fixed hex values. Dynamic tags (`latest`, `safe`, `finalized`, `pending`) are not pre-validated against this limit.
 
+Both fixed endpoints count **inclusively**. The number of blocks is `toBlock - fromBlock + 1`.
+For a 10,000-block span, `fromBlock = 0x64` (100) and `toBlock = 0x2773` (10,099)
+reach the boundary; `toBlock = 0x2774` (10,100) spans 10,001 blocks and exceeds it.
+A single block uses the same `fromBlock` and `toBlock`. Reversed bounds are rejected.
+These examples establish the router's configured 10,000-block ceiling, not availability
+or permission to use that span on every route. Apply a smaller chain/access-tier hint
+when one is returned.
+
 When a request exceeds a limit, the router returns a normalized JSON-RPC error with an actionable hint in `error.message`. See [RPC Error Codes](/intro/rpc-error-codes#error-messages-and-hints) for the full code table.
 
 | Situation | Code | What to do |
@@ -40,7 +48,7 @@ When an upstream node returns a rate-limit (HTTP 429) or service-unavailable (50
 The cooldown error uses **-32005**, not **-32003**. EIP-1474 assigns -32003 to "Transaction rejected", and some clients (e.g. viem's `fallback` transport) treat that code as terminal — they stop and do not try the next provider. Using -32005 lets standard clients fall back or retry on their own. Distinguish a cooldown (HTTP 429, `error.data.reason` = `capacity_cooldown`) from an `eth_getLogs` query-density error, which also uses -32005 but returns HTTP 400.
 </Note>
 
-Our aggregate capacity is high because we pool many providers. If you consistently hit cooldowns on a chain, reach out so we can help optimize.
+Our aggregate capacity depends on the available providers for your chain and method. For workload planning and a capacity assessment, see [Capacity and rate limits](/intro/capacity-and-rate-limits). If you consistently hit cooldowns on a chain, reach out so we can help investigate.
 
 ## Batch requests
 
