@@ -1,0 +1,38 @@
+---
+title: Capacity and rate limits
+description: Plan traffic using route-specific evidence and request a capacity assessment.
+---
+
+RouteMesh pools provider capacity. Capacity depends on the chain and method you call,
+the eligible providers, and their current limits and availability. There is no single
+requests-per-second figure in this guide that guarantees capacity for every route.
+A healthy chain-head probe does not measure sustained throughput.
+
+## Plan a workload
+
+For a capacity assessment, share the chains and methods, routing tier, expected sustained
+and peak requests per second, and how long spikes last. Include relevant response sizes
+or batch sizes. Support can use that scope to investigate; submitting the request does
+not itself confirm capacity or create a throughput commitment.
+
+If you need a firm throughput commitment, ask for a human assessment of those specific
+routes. An unpublished limit is unknown, not unlimited. A configured limit, an observed
+test result, and a contractual commitment are different kinds of evidence.
+
+## What happens during bursts
+
+When an upstream node returns HTTP 429 or 503, RouteMesh puts the pathway on cooldown.
+Cooldowns are per node and method. Other eligible pathways can still serve requests.
+If every eligible pathway is cooling down, the router returns HTTP 429 with JSON-RPC
+code `-32005` and `error.data.reason = capacity_cooldown`.
+See [Request behavior](/intro/request-behavior#cooldowns-and-rate-limiting).
+
+## Prices and query limits
+
+This routing behavior does not establish a fixed burst price or a price guarantee.
+Use [current pricing](/intro/pricing-model#look-up-current-prices) for published route
+prices; ask support about a commercial commitment for your traffic mix.
+The public pricing endpoint's own per-IP request limit is separate from RPC capacity.
+
+For `eth_getLogs`, the block-span ceiling and the returned route-specific hint are query
+limits, not requests-per-second limits. See [eth_getLogs limits](/intro/request-behavior#eth_getlogs-limits).
