@@ -36,6 +36,7 @@
             "group": "Integration",
             "pages": [
               "intro/request-behavior",
+              "intro/ethereum-rpc-failover",
               "intro/capacity-and-rate-limits",
               "intro/websockets",
               "intro/debugging",

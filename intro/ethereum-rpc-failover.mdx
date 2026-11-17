@@ -1,0 +1,97 @@
+---
+title: "Failover setup"
+description: "Set up Ethereum RPC failover with RouteMesh or two independent providers. Test a mainnet eth_call and handle rate limits, timeouts, writes, and WebSocket reconnects."
+---
+
+Ethereum RPC failover lets your application use another eligible upstream when a provider times out, rate limits a request, or returns a transient error. RouteMesh handles upstream failover behind one RPC URL. You can also configure an ordered fallback across two independent providers in your application.
+
+## Choose a setup
+
+| Setup | Choose it when | What you operate |
+| --- | --- | --- |
+| One RPC provider | You are prototyping or can tolerate downtime from a single upstream. | One endpoint, with your own timeouts and retries. |
+| Two independent RPC providers with viem | You need to choose the providers, control their order, or manage direct contracts. | Both endpoints and credentials, plus failover policy and monitoring. |
+| Managed failover with RouteMesh | You want one Ethereum RPC URL with automatic routing and failover across eligible upstreams. | Your RouteMesh key, application deadlines, and error handling. |
+
+With either failover setup, check that your route supports the methods and historical data your application needs. The examples below both call `decimals()` on Ethereum mainnet WETH at the latest block. A successful `eth_call` returns a 32-byte hex value ending in `12`, which is 18 in decimal.
+
+## Use RouteMesh for managed failover
+
+Create an API key in the [Quick start](/intro/quick-start), then set `ROUTEMESH_API_KEY` in your server environment. Ethereum mainnet uses chain ID `1`.
+
+```bash
+: "${ROUTEMESH_API_KEY:?Set ROUTEMESH_API_KEY first}"
+
+curl --silent --show-error --include --max-time 8 \
+  "https://lb.routeme.sh/rpc/1/${ROUTEMESH_API_KEY}" \
+  -H 'Content-Type: application/json' \
+  --data '{"jsonrpc":"2.0","id":1,"method":"eth_call","params":[{"to":"0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2","data":"0x313ce567"},"latest"]}'
+```
+
+Keep the API key on your server. RouteMesh handles upstream selection and failover with both [routing strategies](/intro/routing-strategies). If your application needs a separate path to RouteMesh when the primary load balancer is unreachable, see [Redundancy](/intro/redundancy) for the alternate hostname.
+
+## Use viem with two RPC providers
+
+Set `ETH_RPC_PRIMARY_URL` and `ETH_RPC_SECONDARY_URL` to Ethereum mainnet URLs from two independent providers. Install viem with `npm install viem`, save this as `failover.mjs`, and run `node failover.mjs`.
+
+```javascript
+import { createPublicClient, fallback, http } from 'viem'
+import { mainnet } from 'viem/chains'
+
+const primaryUrl = process.env.ETH_RPC_PRIMARY_URL
+const secondaryUrl = process.env.ETH_RPC_SECONDARY_URL
+if (!primaryUrl || !secondaryUrl) {
+  throw new Error('Set ETH_RPC_PRIMARY_URL and ETH_RPC_SECONDARY_URL')
+}
+
+const client = createPublicClient({
+  chain: mainnet,
+  transport: fallback(
+    [
+      http(primaryUrl, { timeout: 3_000, retryCount: 0 }),
+      http(secondaryUrl, { timeout: 3_000, retryCount: 0 }),
+    ],
+    { retryCount: 0 },
+  ),
+})
+
+const result = await client.request({
+  method: 'eth_call',
+  params: [
+    {
+      to: '0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2',
+      data: '0x313ce567',
+    },
+    'latest',
+  ],
+})
+
+console.log(result)
+```
+
+viem tries the providers in order and moves to the secondary when the primary fails with an eligible error. Each HTTP attempt has a three-second timeout, and the example disables repeat attempts. Set the timeouts to fit your application's latency budget. In staging, point the primary URL to a mock that returns HTTP 502 or delays beyond the configured timeout. Run the read and verify that the secondary returns the result. See [viem's fallback transport documentation](https://viem.sh/docs/clients/transports/fallback) for supported options.
+
+## Handle failures at the application boundary
+
+| You see | What to do |
+| --- | --- |
+| Network timeout, HTTP 429, 502, 503, or 504 | For reads, allow a small number of attempts within an overall deadline. Use exponential backoff with jitter and honor `Retry-After` when present. |
+| RouteMesh responds with HTTP 429 and `error.data.reason` is `capacity_cooldown` | Eligible upstream pathways are cooling down. Back off before retrying. See [Request Behavior](/intro/request-behavior#cooldowns-and-rate-limiting). |
+| Invalid parameters or a contract revert | Check the request and its inputs before sending it again. |
+| An `eth_getLogs` limit error | Follow the response hint to narrow the block range or tighten the filters. See [RPC Error Codes](/intro/rpc-error-codes). |
+
+If you use `latest`, a retry may read a newer block. Pin a block number if related reads need to use the same block height. For requests that still fail, record the RPC method, HTTP status, JSON-RPC error, and RouteMesh's `X-Batch-Id` header when present. See [Debugging](/intro/debugging).
+
+### Transaction writes
+
+A timeout on `eth_sendRawTransaction` can occur after an upstream accepts the signed transaction. Compute and retain the transaction hash before sending, then check it with `eth_getTransactionByHash` or `eth_getTransactionReceipt` if the outcome is unclear. An empty response from one provider can mean the transaction has yet to propagate there. If your application decides to rebroadcast, use the same signed bytes and preserve any private submission policy.
+
+### WebSocket subscriptions
+
+While your client socket stays open, RouteMesh can switch upstream providers and replay missed notifications. If the client socket disconnects, reconnect and re-subscribe. For log subscriptions, track the last processed block, backfill missed events with `eth_getLogs`, and deduplicate overlapping events. See the [WebSocket API](/intro/websockets).
+
+## Benchmark results
+
+In RouteMesh's controlled Ethereum `eth_call` benchmark, the simulated primary returned HTTP 429 or 502 and the simulated backup returned a valid response. Sequential failover and RouteMesh routing each completed 100 of 100 reads under each error condition. The single-upstream configuration completed 0 of 100 under each condition.
+
+The benchmark page publishes the test setup, latency percentiles, and observed production outcomes with sample counts. The production table covers Ethereum `eth_call` requests whose first recorded upstream response was HTTP 429 or 502. [RPC failover benchmark](https://routeme.sh/benchmarks/rpc-failover)
