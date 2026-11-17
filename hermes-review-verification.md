@@ -2,4 +2,4 @@
 
 Temporary documentation fixture for canonical webhook review verification.
 
-Event: opened.
+Events: opened, then synchronize after a documentation update.
