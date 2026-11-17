@@ -50,6 +50,8 @@ The cooldown error uses **-32005**, not **-32003**. EIP-1474 assigns -32003 to "
 
 Our aggregate capacity depends on the available providers for your chain and method. For workload planning and a capacity assessment, see [Capacity and rate limits](/intro/capacity-and-rate-limits). If you consistently hit cooldowns on a chain, reach out so we can help investigate.
 
+For Ethereum RPC failover examples and client retry guidance, see [Failover setup](/intro/ethereum-rpc-failover).
+
 ## Batch requests
 
 You can send multiple JSON-RPC requests in a single HTTP request by posting a **JSON array** of request objects instead of a single object. The response is a JSON array of responses in the **same order** as the requests.

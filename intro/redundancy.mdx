@@ -4,6 +4,8 @@ title: "Redundancy"
 
 Ensuring your application isn't denied RPC service, we've designed RouteMesh with multiple levels of redundancy. In this document we outline all the ways in which we ensure redundancy and how you can best make use of this.
 
+See [Failover setup](/intro/ethereum-rpc-failover) to choose and test an Ethereum RPC failover configuration for your application.
+
 ## **Load Balancing**
 
 Our primary load balancing instance at `lb.routeme.sh` is served by Cloudflare through through proxy based routing ensuring that traffic can migrate to the most healthy pools in less than 15 seconds should there be any server based failures.
